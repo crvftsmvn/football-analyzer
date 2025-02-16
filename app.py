@@ -44,20 +44,38 @@ def format_match_data(df):
         matches = []
         
         for _, game in md_games.iterrows():
-            if md == 1:
-                match_str = f"{game['Home']} vs {game['Away']} => "
-            else:
-                home_pos, home_prev = get_previous_game_result(df, game['Home'], md)
-                away_pos, away_prev = get_previous_game_result(df, game['Away'], md)
+            try:
+                # Validate FTR value first
+                try:
+                    ftr = int(game['FTR'])
+                    if ftr not in [0, 1, 2]:
+                        continue  # Skip this match if FTR is not 0, 1, or 2
+                except (ValueError, TypeError):
+                    continue  # Skip if FTR can't be converted to int
                 
-                home_info = f"<{home_pos} {home_prev}>" if home_pos and home_prev else ""
-                away_info = f"<{away_pos} {away_prev}>" if away_pos and home_prev else ""
-                match_str = f"{home_info} {game['Home']} vs {away_info} {game['Away']} => "
-            
-            ftr = int(game['FTR'])
-            result_map = {0: 'D', 1: 'H', 2: 'A'}
-            match_str += result_map[ftr]
-            matches.append(match_str)
+                if md == 1:
+                    match_str = f"{game['Home']} vs {game['Away']} => "
+                else:
+                    home_pos, home_prev = get_previous_game_result(df, game['Home'], md)
+                    away_pos, away_prev = get_previous_game_result(df, game['Away'], md)
+                    
+                    home_info = f"<{home_pos} {home_prev}>" if home_pos and home_prev else ""
+                    away_info = f"<{away_pos} {away_prev}>" if away_pos and home_prev else ""
+                    match_str = f"{home_info} {game['Home']} vs {away_info} {game['Away']} => "
+                
+                result_map = {0: 'D', 1: 'H', 2: 'A'}
+                
+                # Add error checking for odds columns
+                hm_odd = float(game['HmOd']) if pd.notnull(game['HmOd']) else 0.0
+                dr_odd = float(game['DrOd']) if pd.notnull(game['DrOd']) else 0.0
+                aw_odd = float(game['AwOd']) if pd.notnull(game['AwOd']) else 0.0
+                
+                match_str += f"{result_map[ftr]} [{hm_odd:.2f}, {dr_odd:.2f}, {aw_odd:.2f}]"
+                matches.append(match_str)
+            except Exception as e:
+                print(f"Error processing match: {str(e)}")
+                print(f"Game data: {game}")
+                continue
         
         if matches:
             # Extract just the date part and count games per date
@@ -115,20 +133,15 @@ def home():
 def get_data(league):
     try:
         if league == "English Premier League":
-            file_path = 'data/GoodPrem.csv'
+            # Get the absolute path to the data directory
+            base_dir = os.path.abspath(os.path.dirname(__file__))
+            file_path = os.path.join(base_dir, 'data', 'GoodPrem.csv')
+            
             if not os.path.exists(file_path):
                 return jsonify({"error": f"CSV file not found at {file_path}"})
             
             df = pd.read_csv(file_path)
             formatted_data = format_match_data(df)
-            
-            # Debug print
-            print("Formatted data structure:")
-            for md, data in formatted_data.items():
-                print(f"\n{md}:")
-                print("Matches:", data.get('matches'))
-                print("Summary:", data.get('summary'))
-            
             return jsonify(formatted_data)
         return jsonify({"error": "Data not available for this league yet"})
     except Exception as e:
