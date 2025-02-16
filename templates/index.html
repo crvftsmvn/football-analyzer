@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Football Analyzer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-futbol"></i> Football Analyzer</h1>
+        <div class="league-selector">
+            <select id="leagueSelect">
+                <option value="">Select a League</option>
+                <option value="English Premier League">🏴󠁧󠁢󠁥󠁮󠁧󠁿 English Premier League</option>
+                <option value="French Ligue 1">🇫🇷 French Ligue 1</option>
+                <option value="German Bundesliga">🇩🇪 German Bundesliga</option>
+                <option value="Italian Serie A">🇮🇹 Italian Serie A</option>
+                <option value="Spanish La Liga">🇪🇸 Spanish La Liga</option>
+                <option value="Turkish Super League">🇹🇷 Turkish Super League</option>
+            </select>
+        </div>
+
+        <div id="dataDisplay"></div>
+        
+        <div class="comparison-section">
+            <hr class="section-divider">
+            <div class="comparison-controls">
+                <h3>Compare Matchdays</h3>
+                <div class="view-controls">
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="simplifiedView">
+                        Show only results in comparison view
+                    </label>
+                </div>
+                <div class="matchday-selector">
+                    <div id="matchdayCheckboxes" class="checkbox-grid">
+                        <!-- Checkboxes will be populated by JavaScript -->
+                    </div>
+                    <button id="compareBtn" disabled>Compare Selected</button>
+                </div>
+            </div>
+            <div class="scroll-hint">
+                <i class="fas fa-arrows-left-right"></i> Scroll horizontally to see more
+            </div>
+            <div id="comparisonDisplay" class="comparison-container"></div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
