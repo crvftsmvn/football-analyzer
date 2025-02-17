@@ -1,17 +1,6 @@
 let globalData = null;
 let simplifiedView = false;
 
-document.getElementById('leagueSelect').addEventListener('change', function() {
-    const selectedLeague = this.value;
-    if (selectedLeague) {
-        fetchData(selectedLeague);
-    } else {
-        document.getElementById('dataDisplay').innerHTML = '';
-        document.getElementById('matchdayCheckboxes').innerHTML = '';
-        document.getElementById('comparisonDisplay').innerHTML = '';
-    }
-});
-
 document.getElementById('simplifiedView').addEventListener('change', function() {
     simplifiedView = this.checked;
     updateComparison();
@@ -33,23 +22,30 @@ function populateMatchdayCheckboxes(data) {
     const container = document.getElementById('matchdayCheckboxes');
     container.innerHTML = '';
     
-    Object.keys(data).sort((a, b) => {
+    console.log('Populating checkboxes with data:', data);
+    
+    // Ensure consistent matchday formatting
+    data.sort((a, b) => {
         const numA = parseInt(a.split(' ')[1]);
         const numB = parseInt(b.split(' ')[1]);
         return numA - numB;
     }).forEach(matchday => {
+        // Ensure matchday format is exactly "Matchday X"
+        const formattedMatchday = `Matchday ${parseInt(matchday.split(' ')[1])}`;
+        
         const label = document.createElement('label');
         label.className = 'matchday-checkbox';
         
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-        checkbox.value = matchday;
+        checkbox.value = formattedMatchday;  // Use formatted value
         checkbox.addEventListener('change', function() {
             const selected = getSelectedMatchdays();
+            console.log('Selected matchdays:', selected);
             document.getElementById('compareBtn').disabled = selected.length < 2 || selected.length > 5;
             
-            // If valid selection, update comparison immediately
             if (selected.length >= 2 && selected.length <= 5) {
+                console.log('Triggering comparison with:', selected);
                 displayComparison(selected);
             } else if (selected.length === 0 || selected.length === 1) {
                 document.getElementById('comparisonDisplay').innerHTML = '';
@@ -57,26 +53,40 @@ function populateMatchdayCheckboxes(data) {
         });
         
         label.appendChild(checkbox);
-        label.appendChild(document.createTextNode(matchday));
+        label.appendChild(document.createTextNode(formattedMatchday));
         container.appendChild(label);
     });
 }
 
-function fetchData(league) {
+function selectLeague(league) {
+    console.log('Selecting league:', league);
+    
+    // Clear previous data
+    document.getElementById('dataDisplay').innerHTML = '';
+    document.getElementById('matchdayCheckboxes').innerHTML = '';
+    document.getElementById('comparisonDisplay').innerHTML = '';
+    globalData = null;  // Reset global data when changing leagues
+    
+    // Fetch and display data for selected league
     fetch(`/get_data/${league}`)
         .then(response => {
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            console.log('Response status:', response.status);
             return response.json();
         })
         .then(data => {
-            globalData = data;
+            console.log('Received data:', data);
+            if (data.error) {
+                console.error('Server error:', data.error);
+                document.getElementById('dataDisplay').innerHTML = `<p class="error">${data.error}</p>`;
+                return;
+            }
+            globalData = data;  // Store the data globally
             displayData(data);
-            populateMatchdayCheckboxes(data);
+            populateMatchdayCheckboxes(Object.keys(data));
         })
         .catch(error => {
-            console.error('Error:', error);
-            document.getElementById('dataDisplay').innerHTML = 
-                `<p style="color: red;">Error loading data: ${error.message}</p>`;
+            console.error('Fetch error:', error);
+            document.getElementById('dataDisplay').innerHTML = '<p class="error">Error loading data</p>';
         });
 }
 
@@ -129,9 +139,35 @@ function displayData(data) {
 
 function displayComparison(matchdays) {
     const comparisonDiv = document.getElementById('comparisonDisplay');
+    
+    console.log('Attempting comparison with matchdays:', matchdays);
+    console.log('Global data available:', globalData !== null);
+    
+    if (!globalData) {
+        console.error('No global data available for comparison');
+        return;
+    }
+
+    console.log('Available matchdays in global data:', Object.keys(globalData));
+    
     let html = '';
     matchdays.forEach(matchday => {
-        html += createMatchdayHTML(matchday, globalData, true);  // Show simplified view if enabled
+        console.log(`Processing matchday: ${matchday}`);
+        // Ensure consistent matchday format
+        const formattedMatchday = `Matchday ${parseInt(matchday.split(' ')[1])}`;
+        
+        if (globalData[formattedMatchday]) {
+            console.log(`Found data for matchday: ${formattedMatchday}`);
+            html += createMatchdayHTML(formattedMatchday, globalData, true);
+        } else {
+            console.error(`Matchday ${formattedMatchday} not found in global data. Available keys:`, Object.keys(globalData));
+        }
     });
-    comparisonDiv.innerHTML = html;
+    
+    if (html) {
+        comparisonDiv.innerHTML = html;
+    } else {
+        console.error('No HTML generated for comparison');
+        comparisonDiv.innerHTML = '<p class="error">No data available for selected matchdays</p>';
+    }
 }

@@ -41,6 +41,9 @@ def format_match_data(df):
     
     for md in range(1, max_matchday + 1):
         md_games = df[df['MD'] == md]
+        # Sort games by datetime (ascending) and home team (descending)
+        md_games['DateTime'] = pd.to_datetime(md_games['Date'])
+        md_games = md_games.sort_values(['DateTime', 'Home'], ascending=[True, False])
         matches = []
         
         for _, game in md_games.iterrows():
@@ -70,6 +73,7 @@ def format_match_data(df):
                 dr_odd = float(game['DrOd']) if pd.notnull(game['DrOd']) else 0.0
                 aw_odd = float(game['AwOd']) if pd.notnull(game['AwOd']) else 0.0
                 
+                # Removed the datetime from the match string
                 match_str += f"{result_map[ftr]} [{hm_odd:.2f}, {dr_odd:.2f}, {aw_odd:.2f}]"
                 matches.append(match_str)
             except Exception as e:
@@ -132,21 +136,56 @@ def home():
 @app.route('/get_data/<league>')
 def get_data(league):
     try:
-        if league == "English Premier League":
-            # Get the absolute path to the data directory
-            base_dir = os.path.abspath(os.path.dirname(__file__))
-            file_path = os.path.join(base_dir, 'data', 'GoodPrem.csv')
+        base_dir = os.path.abspath(os.path.dirname(__file__))
+        
+        league_files = {
+            "English Premier League": "GoodPrem.csv",
+            "Italian Serie A": "GoodItaly.csv",
+            "Portugal Primeira League": "GoodPortugal.csv"
+        }
+        
+        if league in league_files:
+            file_path = os.path.join(base_dir, 'data', league_files[league])
+            
+            print(f"Attempting to load: {file_path}")
+            print(f"File exists: {os.path.exists(file_path)}")
             
             if not os.path.exists(file_path):
                 return jsonify({"error": f"CSV file not found at {file_path}"})
             
-            df = pd.read_csv(file_path)
-            formatted_data = format_match_data(df)
-            return jsonify(formatted_data)
+            try:
+                df = pd.read_csv(file_path)
+                print(f"League: {league}")
+                print(f"DataFrame shape: {df.shape}")
+                print(f"DataFrame columns: {df.columns.tolist()}")
+                
+                # Verify required columns exist
+                required_columns = ['MD', 'Date', 'Home', 'Away', 'FTR', 'HmOd', 'DrOd', 'AwOd']
+                missing_columns = [col for col in required_columns if col not in df.columns]
+                
+                if missing_columns:
+                    error_msg = f"Missing required columns in {league_files[league]}: {missing_columns}"
+                    print(error_msg)
+                    return jsonify({"error": error_msg})
+                
+                formatted_data = format_match_data(df)
+                if not formatted_data:
+                    print(f"No formatted data returned for {league}")
+                return jsonify(formatted_data)
+            except pd.errors.EmptyDataError:
+                error_msg = f"CSV file {league_files[league]} is empty"
+                print(error_msg)
+                return jsonify({"error": error_msg})
+            except pd.errors.ParserError as e:
+                error_msg = f"Error parsing CSV file {league_files[league]}: {str(e)}"
+                print(error_msg)
+                return jsonify({"error": error_msg})
+            
         return jsonify({"error": "Data not available for this league yet"})
     except Exception as e:
-        print(f"Error: {str(e)}")
-        return jsonify({"error": str(e)})
+        error_msg = f"Error processing {league}: {str(e)}"
+        print(error_msg)
+        return jsonify({"error": error_msg})
 
 if __name__ == '__main__':
     app.run(debug=True)
