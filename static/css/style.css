@@ -431,3 +431,124 @@ select:focus {
 .matchday-checkbox input {
     margin-right: 8px;
 }
+
+#leagueSelector button.active {
+    background-color: #4CAF50;
+    color: white;
+}
+
+/* Add these styles for the match highlighting */
+.match-item {
+    padding: 12px 15px;
+    margin-bottom: 8px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    font-family: 'Consolas', monospace;
+    font-size: 15px;
+    line-height: 1.4;
+    color: #34495e;
+}
+
+.match-item span {
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
+/* Make the background colors semi-transparent */
+.match-item span[style*="background-color: red"] {
+    background-color: rgba(255, 0, 0, 0.2) !important;
+}
+
+.match-item span[style*="background-color: blue"] {
+    background-color: rgba(0, 0, 255, 0.2) !important;
+}
+
+.match-item span[style*="background-color: green"] {
+    background-color: rgba(0, 255, 0, 0.2) !important;
+}
+
+.match-item span[style*="background-color: purple"] {
+    background-color: rgba(128, 0, 128, 0.2) !important;
+}
+
+.match-item span[style*="background-color: orange"] {
+    background-color: rgba(255, 165, 0, 0.2) !important;
+}
+
+.match-item span[style*="background-color: brown"] {
+    background-color: rgba(165, 42, 42, 0.2) !important;
+}
+
+.match-item span[style*="background-color: pink"] {
+    background-color: rgba(255, 192, 203, 0.2) !important;
+}
+
+/* Add hover effect */
+.match-item:hover {
+    background-color: #e9ecef;
+}
+
+.match-item:hover span {
+    opacity: 0.9;
+}
+
+.matchday-analysis {
+    margin-top: 30px;
+    padding: 20px;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.analysis-controls {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    align-items: center;
+}
+
+#analysisMatchday {
+    padding: 8px 15px;
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+}
+
+#nextDateBtn {
+    padding: 8px 15px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+#nextDateBtn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+#nextDateBtn:hover:not(:disabled) {
+    background-color: #2980b9;
+}
+
+#analysisDisplay {
+    margin-top: 20px;
+}
+
+.date-section {
+    margin-bottom: 30px;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 12px;
+    border-left: 4px solid #3498db;
+}
+
+.date-section h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    font-size: 1.2em;
+}
+
+.date-section:not(:last-child) {
+    margin-bottom: 20px;
+}

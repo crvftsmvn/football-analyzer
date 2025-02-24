@@ -33,6 +33,13 @@
             </button>
         </div>
 
+        <div class="season-selector">
+            <label for="season">Select Season:</label>
+            <select id="season" disabled>
+                <option value="">Select a season</option>
+            </select>
+        </div>
+
         <div id="dataDisplay"></div>
         
         <div class="comparison-section">
@@ -56,6 +63,17 @@
                 <i class="fas fa-arrows-left-right"></i> Scroll horizontally to see more
             </div>
             <div id="comparisonDisplay" class="comparison-container"></div>
+        </div>
+
+        <div class="matchday-analysis">
+            <h2>Matchday Analysis</h2>
+            <div class="analysis-controls">
+                <select id="analysisMatchday">
+                    <option value="">Select Matchday</option>
+                </select>
+                <button id="nextDateBtn" disabled>Display Next Date</button>
+            </div>
+            <div id="analysisDisplay"></div>
         </div>
     </div>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>

@@ -1,5 +1,8 @@
 let globalData = null;
 let simplifiedView = false;
+let currentDateIndex = 0;
+let currentMatchdayData = null;
+let dateGroups = [];
 
 document.getElementById('simplifiedView').addEventListener('change', function() {
     simplifiedView = this.checked;
@@ -65,10 +68,17 @@ function selectLeague(league) {
     document.getElementById('dataDisplay').innerHTML = '';
     document.getElementById('matchdayCheckboxes').innerHTML = '';
     document.getElementById('comparisonDisplay').innerHTML = '';
-    globalData = null;  // Reset global data when changing leagues
+    globalData = null;
     
-    // Fetch and display data for selected league
-    fetch(`/get_data/${league}`)
+    // Update active button state
+    const buttons = document.querySelectorAll('#leagueSelector button');
+    buttons.forEach(button => button.classList.remove('active'));
+    const selectedButton = Array.from(buttons).find(button => button.textContent.trim() === league);
+    if (selectedButton) {
+        selectedButton.classList.add('active');
+    }
+    
+    fetch(`/get_data/${encodeURIComponent(league)}`)
         .then(response => {
             console.log('Response status:', response.status);
             return response.json();
@@ -80,9 +90,68 @@ function selectLeague(league) {
                 document.getElementById('dataDisplay').innerHTML = `<p class="error">${data.error}</p>`;
                 return;
             }
-            globalData = data;  // Store the data globally
-            displayData(data);
-            populateMatchdayCheckboxes(Object.keys(data));
+            
+            // Store all data globally
+            globalData = data.data;
+            
+            // Populate season dropdown if seasons exist
+            if (data.seasons && data.seasons.length > 0) {
+                console.log('Found seasons:', data.seasons);
+                populateSeasonDropdown(data.seasons);
+            } else {
+                console.error('No seasons found in data');
+                document.getElementById('dataDisplay').innerHTML = '<p class="error">No seasons found</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            document.getElementById('dataDisplay').innerHTML = '<p class="error">Error loading data</p>';
+        });
+}
+
+function populateSeasonDropdown(seasons) {
+    const seasonDropdown = document.getElementById('season');
+    seasonDropdown.innerHTML = '<option value="">Select a season</option>';
+    seasonDropdown.disabled = false;
+
+    seasons.forEach(season => {
+        const option = document.createElement('option');
+        option.value = season;
+        option.textContent = season;
+        seasonDropdown.appendChild(option);
+    });
+
+    // Add event listener for season selection
+    seasonDropdown.addEventListener('change', function() {
+        const selectedSeason = this.value;
+        if (selectedSeason) {
+            displaySeasonData(selectedSeason);
+        }
+    });
+}
+
+function displaySeasonData(season) {
+    const league = document.querySelector('#leagueSelector button.active').textContent.trim();
+    
+    console.log('Fetching data for league:', league, 'season:', season);
+    
+    fetch(`/get_data/${encodeURIComponent(league)}?season=${encodeURIComponent(season)}`)
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(result => {
+            console.log('Received data for season:', result);
+            if (result.error) {
+                console.error('Server error:', result.error);
+                document.getElementById('dataDisplay').innerHTML = `<p class="error">${result.error}</p>`;
+                return;
+            }
+            
+            globalData = result.data;
+            displayData(result.data);
+            populateMatchdayCheckboxes(Object.keys(result.data));
+            initializeMatchdayAnalysis();  // Initialize the analysis section
         })
         .catch(error => {
             console.error('Fetch error:', error);
@@ -94,7 +163,7 @@ function formatMatch(match, isComparison) {
     if (isComparison && simplifiedView) {
         return match.split('=>')[1].trim();
     }
-    return match;
+    return match;  // Return the match string without any escaping
 }
 
 function createMatchdayHTML(matchday, data, isComparison = false) {
@@ -106,11 +175,18 @@ function createMatchdayHTML(matchday, data, isComparison = false) {
         ? `comparison-item${simplifiedView ? ' simplified' : ''}` 
         : 'matchday';
     
+    // Create a temporary div to decode HTML entities
+    const decodeHTML = (html) => {
+        const txt = document.createElement('textarea');
+        txt.innerHTML = html;
+        return txt.value;
+    };
+    
     return `
         <div class="${className}">
             <h3>${matchday}</h3>
             <ul>
-                ${matches.map(match => `<li>${formatMatch(match, isComparison).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</li>`).join('')}
+                ${matches.map(match => `<li class="match-item">${decodeHTML(match)}</li>`).join('')}
             </ul>
             <div class="summary">
                 <p>Timing: [${summary.timing.join(', ')}]</p>
@@ -170,4 +246,92 @@ function displayComparison(matchdays) {
         console.error('No HTML generated for comparison');
         comparisonDiv.innerHTML = '<p class="error">No data available for selected matchdays</p>';
     }
+}
+
+function initializeMatchdayAnalysis() {
+    const analysisSelect = document.getElementById('analysisMatchday');
+    const nextDateBtn = document.getElementById('nextDateBtn');
+    
+    // Clear previous options
+    analysisSelect.innerHTML = '<option value="">Select Matchday</option>';
+    
+    if (globalData) {
+        // Add matchday options
+        Object.keys(globalData)
+            .sort((a, b) => {
+                const numA = parseInt(a.split(' ')[1]);
+                const numB = parseInt(b.split(' ')[1]);
+                return numA - numB;
+            })
+            .forEach(matchday => {
+                const option = document.createElement('option');
+                option.value = matchday;
+                option.textContent = matchday;
+                analysisSelect.appendChild(option);
+            });
+    }
+    
+    // Add event listeners
+    analysisSelect.addEventListener('change', function() {
+        if (this.value) {
+            currentDateIndex = 0;
+            currentMatchdayData = globalData[this.value];
+            groupMatchesByDate();
+            // Clear previous display
+            document.getElementById('analysisDisplay').innerHTML = '';
+            // Show first date's games
+            displayCurrentDateGames();
+            nextDateBtn.disabled = dateGroups.length <= 1;
+        } else {
+            currentMatchdayData = null;
+            dateGroups = [];
+            document.getElementById('analysisDisplay').innerHTML = '';
+            nextDateBtn.disabled = true;
+        }
+    });
+    
+    nextDateBtn.addEventListener('click', function() {
+        if (currentDateIndex < dateGroups.length - 1) {
+            currentDateIndex++;
+            displayCurrentDateGames();
+            this.disabled = currentDateIndex >= dateGroups.length - 1;
+        }
+    });
+}
+
+function groupMatchesByDate() {
+    dateGroups = [];
+    if (!currentMatchdayData) return;
+    
+    const matches = currentMatchdayData.matches;
+    const timing = currentMatchdayData.summary.timing;
+    
+    let currentIndex = 0;
+    timing.forEach(gamesCount => {
+        dateGroups.push(matches.slice(currentIndex, currentIndex + gamesCount));
+        currentIndex += gamesCount;
+    });
+}
+
+function displayCurrentDateGames() {
+    const displayDiv = document.getElementById('analysisDisplay');
+    if (!dateGroups[currentDateIndex]) {
+        return;
+    }
+    
+    const games = dateGroups[currentDateIndex];
+    const totalDates = dateGroups.length;
+    
+    // Create new section for current date
+    const dateSection = document.createElement('div');
+    dateSection.className = 'date-section';
+    dateSection.innerHTML = `
+        <h3>Date ${currentDateIndex + 1} of ${totalDates}</h3>
+        <ul>
+            ${games.map(match => `<li class="match-item">${match}</li>`).join('')}
+        </ul>
+    `;
+    
+    // Append new section instead of replacing all content
+    displayDiv.appendChild(dateSection);
 }
