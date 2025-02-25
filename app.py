@@ -384,9 +384,9 @@ def get_data(league):
         base_dir = os.path.dirname(os.path.abspath(__file__))
         data_dir = os.path.join(base_dir, 'data')
         
-        # Create data directory if it doesn't exist
-        if not os.path.exists(data_dir):
-            os.makedirs(data_dir)
+        print(f"Base directory: {base_dir}")
+        print(f"Data directory: {data_dir}")
+        print(f"Current working directory: {os.getcwd()}")
         
         league_files = {
             "English Premier League": "EnglishPremierLeague.csv",
@@ -396,20 +396,23 @@ def get_data(league):
         
         if league in league_files:
             file_path = os.path.join(data_dir, league_files[league])
+            print(f"Looking for file at: {file_path}")
             
             if not os.path.exists(file_path):
-                print(f"CSV file not found. Looking in: {file_path}")
-                print(f"Current working directory: {os.getcwd()}")
-                print(f"Directory contents: {os.listdir(data_dir)}")
-                return jsonify({"error": f"CSV file not found. Please ensure data files are in the correct location."}), 404
+                print(f"File not found at {file_path}")
+                print(f"Directory contents of {data_dir}:")
+                try:
+                    print(os.listdir(data_dir))
+                except Exception as e:
+                    print(f"Error listing directory: {str(e)}")
+                return jsonify({"error": "Data file not found"}), 404
             
             try:
                 full_df = pd.read_csv(file_path)
-                print(f"Successfully loaded data for {league}")
-                print(f"Available seasons: {full_df['Season'].unique()}")
+                print(f"Successfully loaded {league} data")
             except Exception as e:
-                print(f"Error reading CSV file: {str(e)}")
-                return jsonify({"error": f"Error reading CSV file: {str(e)}"}), 500
+                print(f"Error reading CSV: {str(e)}")
+                return jsonify({"error": f"Error reading data: {str(e)}"}), 500
             
             # Get seasons
             seasons = sorted(full_df['Season'].unique().tolist())
@@ -436,4 +439,6 @@ def get_data(league):
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Check if running on Heroku
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
