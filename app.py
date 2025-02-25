@@ -380,7 +380,13 @@ def home():
 @app.route('/get_data/<league>', methods=['GET'])
 def get_data(league):
     try:
-        base_dir = os.path.abspath(os.path.dirname(__file__))
+        # Get the directory where the script is located
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        data_dir = os.path.join(base_dir, 'data')
+        
+        # Create data directory if it doesn't exist
+        if not os.path.exists(data_dir):
+            os.makedirs(data_dir)
         
         league_files = {
             "English Premier League": "EnglishPremierLeague.csv",
@@ -389,15 +395,21 @@ def get_data(league):
         }
         
         if league in league_files:
-            file_path = os.path.join(base_dir, 'data', league_files[league])
+            file_path = os.path.join(data_dir, league_files[league])
             
             if not os.path.exists(file_path):
-                return jsonify({"error": f"CSV file not found at {file_path}"})
+                print(f"CSV file not found. Looking in: {file_path}")
+                print(f"Current working directory: {os.getcwd()}")
+                print(f"Directory contents: {os.listdir(data_dir)}")
+                return jsonify({"error": f"CSV file not found. Please ensure data files are in the correct location."}), 404
             
-            # Load all data
-            full_df = pd.read_csv(file_path)
-            print(f"Loaded data for {league}")
-            print(f"Available seasons: {full_df['Season'].unique()}")
+            try:
+                full_df = pd.read_csv(file_path)
+                print(f"Successfully loaded data for {league}")
+                print(f"Available seasons: {full_df['Season'].unique()}")
+            except Exception as e:
+                print(f"Error reading CSV file: {str(e)}")
+                return jsonify({"error": f"Error reading CSV file: {str(e)}"}), 500
             
             # Get seasons
             seasons = sorted(full_df['Season'].unique().tolist())
@@ -407,9 +419,8 @@ def get_data(league):
             
             if selected_season:
                 print(f"Processing season: {selected_season}")
-                # Filter for selected season but pass full DataFrame
                 df_season = full_df[full_df['Season'] == selected_season].copy()
-                formatted_data = format_match_data(df_season, full_df)  # Pass both DataFrames
+                formatted_data = format_match_data(df_season, full_df)
             else:
                 formatted_data = {}
             
@@ -421,7 +432,7 @@ def get_data(league):
         return jsonify({"error": "League not found"}), 404
         
     except Exception as e:
-        print(f"Error: {str(e)}")
+        print(f"Error in get_data: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
