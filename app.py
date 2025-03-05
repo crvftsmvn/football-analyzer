@@ -254,9 +254,9 @@ def format_match_data(df_season, full_df):
                 if md_games.empty:
                     continue
                 
-                # Sort games by datetime and home team
+                # Sort games by datetime and home team (both ascending)
                 md_games['DateTime'] = pd.to_datetime(md_games['Date'])
-                md_games = md_games.sort_values(['DateTime', 'Home'], ascending=[True, False])
+                md_games = md_games.sort_values(['DateTime', 'Home'], ascending=[True, True])
                 matches = []
                 
                 # Initialize counters for results

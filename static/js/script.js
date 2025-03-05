@@ -135,27 +135,75 @@ function displaySeasonData(season) {
     
     console.log('Fetching data for league:', league, 'season:', season);
     
+    // Show loading state
+    document.getElementById('dataDisplay').innerHTML = '<p>Loading data...</p>';
+    if (document.getElementById('matchdayDisplay')) {
+        document.getElementById('matchdayDisplay').textContent = 'Loading...';
+    }
+    
+    // Add a timeout to detect if the request is hanging
+    const timeoutId = setTimeout(() => {
+        console.error('Request timeout after 30 seconds');
+        document.getElementById('dataDisplay').innerHTML = '<p class="error">Request timed out. Please try again.</p>';
+    }, 30000);
+    
     fetch(`/get_data/${encodeURIComponent(league)}?season=${encodeURIComponent(season)}`)
         .then(response => {
-            console.log('Response status:', response.status);
+            console.log('Response received:', response.status);
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                return response.json().then(errorData => {
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                });
+            }
             return response.json();
         })
         .then(result => {
-            console.log('Received data for season:', result);
+            console.log('Data received:', result);
+            
+            if (!result) {
+                throw new Error('Empty response received');
+            }
+            
             if (result.error) {
-                console.error('Server error:', result.error);
-                document.getElementById('dataDisplay').innerHTML = `<p class="error">${result.error}</p>`;
+                throw new Error(result.error);
+            }
+            
+            if (!result.data) {
+                throw new Error('No data field in response');
+            }
+            
+            if (Object.keys(result.data).length === 0) {
+                document.getElementById('dataDisplay').innerHTML = '<p class="error">No data available for this season</p>';
+                if (document.getElementById('matchdayDisplay')) {
+                    document.getElementById('matchdayDisplay').textContent = 'No matchday data available';
+                }
                 return;
             }
             
             globalData = result.data;
-            displayData(result.data);
-            populateMatchdayCheckboxes(Object.keys(result.data));
-            initializeMatchdayAnalysis();  // Initialize the analysis section
+            console.log('Processed data:', globalData);
+            
+            try {
+                displayData(result.data);
+                populateMatchdayCheckboxes(Object.keys(result.data));
+                initializeMatchdayAnalysis();
+                if (typeof updateCurrentMatchday === 'function') {
+                    updateCurrentMatchday();
+                }
+            } catch (error) {
+                console.error('Error processing data:', error);
+                document.getElementById('dataDisplay').innerHTML = `<p class="error">Error processing data: ${error.message}</p>`;
+            }
         })
         .catch(error => {
-            console.error('Fetch error:', error);
-            document.getElementById('dataDisplay').innerHTML = '<p class="error">Error loading data</p>';
+            clearTimeout(timeoutId);
+            console.error('Error loading data:', error);
+            document.getElementById('dataDisplay').innerHTML = `<p class="error">Error loading data: ${error.message}</p>`;
+            if (document.getElementById('matchdayDisplay')) {
+                document.getElementById('matchdayDisplay').textContent = 'Error loading matchday data';
+            }
         });
 }
 
@@ -182,6 +230,8 @@ function createMatchdayHTML(matchday, data, isComparison = false) {
         return txt.value;
     };
     
+    // No need to sort matches here as they're already sorted in Python
+    
     return `
         <div class="${className}">
             <h3>${matchday}</h3>
@@ -199,6 +249,8 @@ function createMatchdayHTML(matchday, data, isComparison = false) {
 
 function displayData(data) {
     const displayDiv = document.getElementById('dataDisplay');
+    
+    // Sort matchdays by number
     const sortedMatchdays = Object.keys(data).sort((a, b) => {
         const numA = parseInt(a.split(' ')[1]);
         const numB = parseInt(b.split(' ')[1]);
@@ -207,7 +259,7 @@ function displayData(data) {
     
     let html = '';
     sortedMatchdays.forEach(matchday => {
-        html += createMatchdayHTML(matchday, data, false);  // Always show full view
+        html += createMatchdayHTML(matchday, data, false);
     });
     
     displayDiv.innerHTML = html;
@@ -334,4 +386,24 @@ function displayCurrentDateGames() {
     
     // Append new section instead of replacing all content
     displayDiv.appendChild(dateSection);
+}
+
+// Add this function to display the current matchday in the UI
+function updateCurrentMatchday() {
+    const matchdayDisplay = document.getElementById('matchdayDisplay');
+    if (!matchdayDisplay || !globalData) return;
+    
+    // Find the latest matchday with data
+    const matchdays = Object.keys(globalData).sort((a, b) => {
+        const numA = parseInt(a.split(' ')[1]);
+        const numB = parseInt(b.split(' ')[1]);
+        return numB - numA; // Sort in descending order
+    });
+    
+    if (matchdays.length > 0) {
+        const currentMatchday = matchdays[0];
+        matchdayDisplay.textContent = currentMatchday;
+    } else {
+        matchdayDisplay.textContent = "No matchday data available";
+    }
 }
