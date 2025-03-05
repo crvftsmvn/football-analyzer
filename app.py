@@ -1,6 +1,7 @@
 from flask import Flask, render_template, jsonify, request
-import pandas as pd
 import os
+import pandas as pd
+import numpy as np
 
 app = Flask(__name__)
 
@@ -373,8 +374,12 @@ def format_match_data(df_season, full_df):
         print(f"Error in format_match_data: {str(e)}")
         raise
 
+@app.route('/test')
+def test():
+    return "App is running correctly!"
+
 @app.route('/')
-def home():
+def index():
     return render_template('index.html')
 
 @app.route('/get_data/<league>', methods=['GET'])
