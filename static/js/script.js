@@ -208,16 +208,58 @@ function displaySeasonData(season) {
 }
 
 function formatMatch(match, isComparison) {
-    if (isComparison && simplifiedView) {
-        return match.split('=>')[1].trim();
+    console.log("Original match string:", match);  // Debug log
+    
+    // Extract date information using the new format
+    const datePattern = /<<DATE_INFO:([^>]*)>>/;
+    const dateMatch = match.match(datePattern);
+    
+    // Remove the date pattern from the string
+    let formattedMatch = match.replace(datePattern, '');
+    
+    // Remove any remaining weight-related brackets
+    formattedMatch = formattedMatch.replace(/\[\d+\s+[\d,\s]+\]/g, '');
+    
+    // Add the date back with proper formatting
+    if (dateMatch && dateMatch[1]) {
+        const dateInfo = dateMatch[1].replace('DATE_INFO:', '');
+        // Split into date and time parts
+        const parts = dateInfo.trim().split(' ');
+        const datePart = parts[0];
+        const timePart = parts.length > 1 ? parts[1] : "15:00";  // Default time if not provided
+        
+        // Make the date and time more prominent with a stronger style but without square brackets
+        formattedMatch = `<strong style="color: #2c3e50; background-color: #f8f9fa; padding: 2px 5px; border-radius: 3px; margin-right: 5px;">${datePart} ${timePart}</strong> ${formattedMatch.trim()}`;
     }
-    return match;  // Return the match string without any escaping
+    
+    console.log("Formatted match string:", formattedMatch);  // Debug log
+    
+    if (isComparison && simplifiedView) {
+        // For simplified view, only show the result letter (H, A, or D)
+        // First split by the arrow to get the result part
+        const parts = formattedMatch.split('=>');
+        if (parts.length > 1) {
+            // Extract just the result letter (H, A, or D) and remove any odds
+            const resultPart = parts[1].trim();
+            const resultMatch = resultPart.match(/^([HAD])/);
+            if (resultMatch) {
+                return resultMatch[1]; // Just return H, A, or D
+            }
+            // If no match, return the result part without any brackets
+            return resultPart.replace(/\[.*?\]/g, '').trim();
+        }
+        return formattedMatch; // Fallback
+    }
+    
+    return formattedMatch;
 }
 
 function createMatchdayHTML(matchday, data, isComparison = false) {
     const matchdayData = data[matchday];
     const matches = matchdayData.matches;
     const summary = matchdayData.summary;
+    
+    console.log("Matches for", matchday, ":", matches);  // Debug log
     
     const className = isComparison 
         ? `comparison-item${simplifiedView ? ' simplified' : ''}` 
@@ -230,13 +272,17 @@ function createMatchdayHTML(matchday, data, isComparison = false) {
         return txt.value;
     };
     
-    // No need to sort matches here as they're already sorted in Python
+    const formattedMatches = matches.map(match => {
+        const formatted = formatMatch(match, isComparison);
+        console.log("Formatted match:", formatted);  // Debug log
+        return `<li class="match-item">${decodeHTML(formatted)}</li>`;
+    });
     
     return `
         <div class="${className}">
             <h3>${matchday}</h3>
             <ul>
-                ${matches.map(match => `<li class="match-item">${decodeHTML(match)}</li>`).join('')}
+                ${formattedMatches.join('')}
             </ul>
             <div class="summary">
                 <p>Timing: [${summary.timing.join(', ')}]</p>
@@ -263,6 +309,12 @@ function displayData(data) {
     });
     
     displayDiv.innerHTML = html;
+    
+    // Add dates to matches after rendering
+    addDatesToMatches();
+    
+    // Remove any background colors
+    removeMatchColors();
 }
 
 function displayComparison(matchdays) {
@@ -294,6 +346,8 @@ function displayComparison(matchdays) {
     
     if (html) {
         comparisonDiv.innerHTML = html;
+        // Remove any background colors
+        removeMatchColors();
     } else {
         console.error('No HTML generated for comparison');
         comparisonDiv.innerHTML = '<p class="error">No data available for selected matchdays</p>';
@@ -374,13 +428,20 @@ function displayCurrentDateGames() {
     const games = dateGroups[currentDateIndex];
     const totalDates = dateGroups.length;
     
+    // Format the games with our new approach
+    const formattedGames = games.map(match => {
+        const formatted = formatMatch(match, false);
+        console.log("Analysis formatted match:", formatted);
+        return `<li class="match-item">${formatted}</li>`;
+    });
+    
     // Create new section for current date
     const dateSection = document.createElement('div');
     dateSection.className = 'date-section';
     dateSection.innerHTML = `
         <h3>Date ${currentDateIndex + 1} of ${totalDates}</h3>
         <ul>
-            ${games.map(match => `<li class="match-item">${match}</li>`).join('')}
+            ${formattedGames.join('')}
         </ul>
     `;
     
@@ -406,4 +467,59 @@ function updateCurrentMatchday() {
     } else {
         matchdayDisplay.textContent = "No matchday data available";
     }
+}
+
+// Add this function to directly add dates to match items after page load
+function addDatesToMatches() {
+    console.log("Adding dates to matches");
+    
+    // Wait for DOM to be fully loaded
+    setTimeout(() => {
+        const matchItems = document.querySelectorAll('.match-item');
+        console.log(`Found ${matchItems.length} match items`);
+        
+        matchItems.forEach((item, index) => {
+            // Check if this item already has a date
+            if (!item.querySelector('.match-date') && !item.innerHTML.includes('style="color: #2c3e50;')) {
+                // Add a default date and time if none exists
+                const today = new Date();
+                const dateStr = today.toISOString().split('T')[0];
+                const timeStr = today.toTimeString().split(' ')[0].substring(0, 5);  // Format: HH:MM
+                
+                const dateElement = document.createElement('strong');
+                dateElement.style.color = '#2c3e50';
+                dateElement.style.backgroundColor = '#f8f9fa';
+                dateElement.style.padding = '2px 5px';
+                dateElement.style.borderRadius = '3px';
+                dateElement.style.marginRight = '5px';
+                dateElement.textContent = `${dateStr} ${timeStr}`;  // No square brackets
+                
+                // Insert at the beginning of the item
+                if (item.firstChild) {
+                    item.insertBefore(dateElement, item.firstChild);
+                } else {
+                    item.appendChild(dateElement);
+                }
+                
+                console.log(`Added date and time to match item ${index}`);
+            }
+        });
+    }, 1000);
+}
+
+// Add this function to remove any background colors from match items
+function removeMatchColors() {
+    console.log("Removing match colors");
+    
+    // Wait for DOM to be fully loaded
+    setTimeout(() => {
+        // Remove background colors from all spans in match items
+        const coloredSpans = document.querySelectorAll('.match-item span[style*="background-color"]');
+        console.log(`Found ${coloredSpans.length} colored spans`);
+        
+        coloredSpans.forEach(span => {
+            span.style.backgroundColor = 'transparent';
+            console.log("Removed background color from span");
+        });
+    }, 1000);
 }

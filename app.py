@@ -5,86 +5,6 @@ import numpy as np
 
 app = Flask(__name__)
 
-def get_last_five_games_weight(df, team, current_md, current_season):
-    try:
-        weights = []
-        games_found = 0
-        
-        if current_md == 1:
-            # For matchday 1, look at previous season's last games
-            current_year = int(current_season.split('-')[0])
-            prev_season = f"{current_year-1}-{current_year}"
-            
-            prev_season_df = df[df['Season'] == prev_season].copy()
-            if not prev_season_df.empty:
-                max_md = prev_season_df['MD'].max()
-                for md in range(max_md, max_md-5, -1):
-                    if games_found >= 5:
-                        break
-                        
-                    game = prev_season_df[
-                        (prev_season_df['MD'] == md) & 
-                        ((prev_season_df['Home'] == team) | (prev_season_df['Away'] == team))
-                    ]
-                    
-                    if not game.empty:
-                        game = game.iloc[0]
-                        was_home = game['Home'] == team
-                        ftr = int(float(game['FTR']))
-                        
-                        # Calculate weight
-                        if ftr == 0:  # Draw
-                            weights.append(10)
-                        elif (ftr == 1 and was_home) or (ftr == 2 and not was_home):  # Win
-                            weights.append(20)
-                        else:  # Loss
-                            weights.append(0)
-                        
-                        games_found += 1
-        else:
-            # For other matchdays, look at current season's previous games
-            current_df = df[df['Season'] == current_season].copy()
-            
-            for md in range(current_md-1, current_md-6, -1):
-                if games_found >= 5:
-                    break
-                    
-                if md < 1:
-                    weights.append(0)  # Pad with 0 if not enough games
-                    continue
-                    
-                game = current_df[
-                    (current_df['MD'] == md) & 
-                    ((current_df['Home'] == team) | (current_df['Away'] == team))
-                ]
-                
-                if not game.empty:
-                    game = game.iloc[0]
-                    was_home = game['Home'] == team
-                    ftr = int(float(game['FTR']))
-                    
-                    # Calculate weight
-                    if ftr == 0:  # Draw
-                        weights.append(10)
-                    elif (ftr == 1 and was_home) or (ftr == 2 and not was_home):  # Win
-                        weights.append(20)
-                    else:  # Loss
-                        weights.append(0)
-                    
-                    games_found += 1
-                else:
-                    weights.append(0)  # No game found for this matchday
-        
-        # Pad with zeros if we don't have 5 games
-        while len(weights) < 5:
-            weights.append(0)
-            
-        return sum(weights), weights[:5]  # Return total and last 5 weights
-        
-    except Exception as e:
-        print(f"Error calculating weights: {str(e)}")
-        return 0, [0, 0, 0, 0, 0]
-
 def get_previous_game_result(df, team, current_md, current_season):
     try:
         if current_md == 1:
@@ -100,7 +20,7 @@ def get_previous_game_result(df, team, current_md, current_season):
             
             if prev_season_df.empty:
                 print(f"No data found for previous season: {prev_season}")
-                return None, None, 0, [0, 0, 0, 0, 0]
+                return None, None
                 
             # Get the last matchday of previous season
             last_md = prev_season_df['MD'].max()
@@ -113,7 +33,7 @@ def get_previous_game_result(df, team, current_md, current_season):
             
             if prev_games.empty:
                 print(f"No games found for {team} in matchday {last_md} of season {prev_season}")
-                return None, None, 0, [0, 0, 0, 0, 0]
+                return None, None
                 
             print(f"Found previous game for {team}: {prev_games.iloc[0]['Home']} vs {prev_games.iloc[0]['Away']}")
         else:
@@ -128,7 +48,7 @@ def get_previous_game_result(df, team, current_md, current_season):
             ].sort_values('MD', ascending=False)
         
         if prev_games.empty:
-            return None, None, 0, [0, 0, 0, 0, 0]
+            return None, None
             
         last_game = prev_games.iloc[0]
         was_home = last_game['Home'] == team
@@ -144,17 +64,14 @@ def get_previous_game_result(df, team, current_md, current_season):
                 result = 'L' if was_home else 'W'
         except (ValueError, TypeError):
             print(f"Invalid FTR value: {last_game['FTR']}")
-            return None, None, 0, [0, 0, 0, 0, 0]
+            return None, None
             
-        # Calculate weights for last 5 games
-        total_weight, weights = get_last_five_games_weight(df, team, current_md, current_season)
-            
-        return position, result, total_weight, weights
+        return position, result
         
     except Exception as e:
         print(f"Error in get_previous_game_result: {str(e)}")
         print(f"Team: {team}, MD: {current_md}, Current Season: {current_season}")
-        return None, None, 0, [0, 0, 0, 0, 0]
+        return None, None
 
 def are_odds_similar(odds1, odds2, threshold=0.05):
     """Check if two sets of odds are similar (within threshold) regardless of order"""
@@ -165,46 +82,29 @@ def are_odds_similar(odds1, odds2, threshold=0.05):
     sorted2 = sorted(odds2)
     return all(abs(a - b) <= threshold for a, b in zip(sorted1, sorted2))
 
-def are_weights_matching(weights1, weights2):
-    """Check if two weight sequences are exactly the same after sorting"""
-    try:
-        # Extract total and sequence parts
-        total1, seq1 = weights1.split(' ', 1)
-        total2, seq2 = weights2.split(' ', 1)
-        
-        # Convert sequences to lists of integers and sort them
-        seq1_list = [int(x.strip()) for x in seq1.split(',')]
-        seq2_list = [int(x.strip()) for x in seq2.split(',')]
-        
-        # Compare totals and sorted sequences
-        return int(total1) == int(total2) and sorted(seq1_list) == sorted(seq2_list)
-    except Exception as e:
-        print(f"Error comparing weights: {str(e)}")
-        print(f"Weights1: {weights1}")
-        print(f"Weights2: {weights2}")
-        return False
-
 def get_color_code(index):
     """Return a color code based on index"""
     colors = ['red', 'blue', 'green', 'purple', 'orange', 'brown', 'pink']
     return colors[index % len(colors)]
 
 def find_matching_games(matches_data):
-    """Find games with matching odds or weights and assign colors"""
+    """Find games with matching odds and assign colors"""
     odds_groups = {}  # {odds_key: [game_indices]}
-    weight_groups = {}  # {weights_key: [game_indices]}
     
-    # First pass: collect all odds and weights
+    # Collect all odds
     for i, match in enumerate(matches_data):
         try:
-            # Extract odds
-            odds_str = match.split('[')[-1].strip(']')
+            # Extract odds from the last bracket in the string
+            parts = match.split(' => ')
+            if len(parts) < 2:
+                continue
+                
+            result_part = parts[1]
+            if '[' not in result_part:
+                continue
+                
+            odds_str = result_part.split('[')[-1].strip(']')
             odds = tuple(sorted(float(x.strip()) for x in odds_str.split(',')))
-            
-            # Extract weights from both teams
-            parts = match.split(' vs ')
-            home_part = parts[0].split('[')[1].split(']')[0]
-            away_part = parts[1].split('[')[1].split(']')[0]
             
             # Group by odds
             for key, indices in odds_groups.items():
@@ -214,16 +114,6 @@ def find_matching_games(matches_data):
             else:
                 odds_groups[odds] = [i]
             
-            # Group by weights
-            for existing_key, indices in weight_groups.items():
-                home_key, away_key = existing_key
-                if (are_weights_matching(home_part, home_key) and are_weights_matching(away_part, away_key)) or \
-                   (are_weights_matching(home_part, away_key) and are_weights_matching(away_part, home_key)):
-                    indices.append(i)
-                    break
-            else:
-                weight_groups[(home_part, away_part)] = [i]
-            
         except Exception as e:
             print(f"Error processing match {i}: {str(e)}")
             print(f"Match string: {match}")
@@ -231,17 +121,16 @@ def find_matching_games(matches_data):
     
     # Filter groups to keep only those with multiple matches
     odds_groups = {k: v for k, v in odds_groups.items() if len(v) > 1}
-    weight_groups = {k: v for k, v in weight_groups.items() if len(v) > 1}
     
     # Assign colors
     odds_colors = {i: get_color_code(idx) for idx, group in enumerate(odds_groups.values()) for i in group}
-    weight_colors = {i: get_color_code(idx) for idx, group in enumerate(weight_groups.values()) for i in group}
     
-    return odds_colors, weight_colors
+    return odds_colors
 
 def format_match_data(df_season, full_df):
     try:
-        df_season = df_season.copy()
+        # Create a deep copy to avoid SettingWithCopyWarning
+        df_season = df_season.copy(deep=True)
         df_season['MD'] = pd.to_numeric(df_season['MD'], errors='coerce')
         current_season = df_season['Season'].iloc[0]  # Get the current season
         df_season = df_season.sort_values('MD')
@@ -251,12 +140,12 @@ def format_match_data(df_season, full_df):
         
         for md in range(1, max_matchday + 1):
             try:
-                md_games = df_season[df_season['MD'] == float(md)]
+                md_games = df_season[df_season['MD'] == float(md)].copy(deep=True)  # Create a copy here
                 if md_games.empty:
                     continue
                 
                 # Sort games by datetime and home team (both ascending)
-                md_games['DateTime'] = pd.to_datetime(md_games['Date'])
+                md_games.loc[:, 'DateTime'] = pd.to_datetime(md_games['Date'])  # Use .loc to avoid warning
                 md_games = md_games.sort_values(['DateTime', 'Home'], ascending=[True, True])
                 matches = []
                 
@@ -293,22 +182,51 @@ def format_match_data(df_season, full_df):
                         except:
                             pass  # Skip if h2h score processing fails
                         
-                        # Format match string
+                        # Format date and time
+                        try:
+                            # Get date from the Date column
+                            if 'Date' in game and pd.notnull(game['Date']):
+                                date_str = str(game['Date'])
+                                
+                                # Try to get time information
+                                time_str = ""
+                                if 'Time' in game and pd.notnull(game['Time']):
+                                    time_str = str(game['Time'])
+                                elif 'DateTime' in game and pd.notnull(game['DateTime']):
+                                    # If we have a DateTime column, extract the time part
+                                    time_str = str(game['DateTime'].time())
+                                else:
+                                    # If no time is available, use a default time
+                                    time_str = "15:00"  # Default to 3 PM
+                                
+                                # Format with both date and time
+                                date_time_str = f"DATE_INFO:{date_str} {time_str}"
+                            else:
+                                date_time_str = "DATE_INFO:Unknown Unknown"
+                            
+                            # Format with a distinctive prefix that won't be confused with other brackets
+                            date_time_str = f"<<{date_time_str}>>"
+                            print(f"Adding date and time: {date_time_str} to match")  # Debug print
+                        except Exception as e:
+                            print(f"Error formatting date/time: {str(e)}")
+                            date_time_str = "<<DATE_INFO:Unknown Unknown>>"
+                        
+                        # Get previous game results without weights
                         if md == 1:
                             # For matchday 1, always show previous results
-                            home_pos, home_prev, home_weight, home_weights = get_previous_game_result(full_df, game['Home'], md, current_season)
-                            away_pos, away_prev, away_weight, away_weights = get_previous_game_result(full_df, game['Away'], md, current_season)
+                            home_pos, home_prev = get_previous_game_result(full_df, game['Home'], md, current_season)
+                            away_pos, away_prev = get_previous_game_result(full_df, game['Away'], md, current_season)
                             
                             home_info = f"<{home_pos} {home_prev}>" if home_pos and home_prev else "<null null>"
                             away_info = f"<{away_pos} {away_prev}>" if away_pos and away_prev else "<null null>"
-                            match_str = f"{home_info} [{home_weight} {', '.join(map(str, home_weights))}] {game['Home']} vs {away_info} [{away_weight} {', '.join(map(str, away_weights))}] {game['Away']} => "
+                            match_str = f"{date_time_str}{home_info} {game['Home']} vs {away_info} {game['Away']} => "
                         else:
-                            home_pos, home_prev, home_weight, home_weights = get_previous_game_result(df_season, game['Home'], md, current_season)
-                            away_pos, away_prev, away_weight, away_weights = get_previous_game_result(df_season, game['Away'], md, current_season)
+                            home_pos, home_prev = get_previous_game_result(df_season, game['Home'], md, current_season)
+                            away_pos, away_prev = get_previous_game_result(df_season, game['Away'], md, current_season)
                             
                             home_info = f"<{home_pos} {home_prev}>" if home_pos and home_prev else ""
                             away_info = f"<{away_pos} {away_prev}>" if away_pos and away_prev else ""
-                            match_str = f"{home_info} [{home_weight} {', '.join(map(str, home_weights))}] {game['Home']} vs {away_info} [{away_weight} {', '.join(map(str, away_weights))}] {game['Away']} => "
+                            match_str = f"{date_time_str}{home_info} {game['Home']} vs {away_info} {game['Away']} => "
                         
                         result_map = {0: 'D', 1: 'H', 2: 'A'}
                         
@@ -328,34 +246,11 @@ def format_match_data(df_season, full_df):
                     md_games['DateOnly'] = pd.to_datetime(md_games['Date']).dt.date
                     timing = md_games.groupby('DateOnly').size().tolist()
                     
-                    # Find matching games and get their colors
-                    odds_colors, weight_colors = find_matching_games(matches)
+                    # Find matching games but don't use their colors
+                    odds_colors = find_matching_games(matches)
                     
-                    # Add color tags to matches
-                    colored_matches = []
-                    for i, match in enumerate(matches):
-                        odds_color = odds_colors.get(i)
-                        weight_color = weight_colors.get(i)
-                        
-                        if odds_color or weight_color:
-                            # Split the match string to color the appropriate parts
-                            parts = match.split(' => ')
-                            teams_part = parts[0]
-                            odds_part = parts[1]
-                            
-                            if weight_color:
-                                # Color the weights sections
-                                teams_part = f'<span style="background-color: {weight_color};">{teams_part}</span>'
-                            
-                            if odds_color:
-                                # Color the odds section
-                                odds_part = f'<span style="background-color: {odds_color};">{odds_part}</span>'
-                            
-                            colored_match = f"{teams_part} => {odds_part}"
-                        else:
-                            colored_match = match
-                        
-                        colored_matches.append(colored_match)
+                    # Don't add color tags to matches
+                    colored_matches = matches.copy()  # Just use the original matches
                     
                     formatted_data[f"Matchday {md}"] = {
                         'matches': colored_matches,
