@@ -109,16 +109,20 @@ select:focus {
     color: #000;
 }
 
-.summary p:first-child {
-    color: #e67e22;
+.summary p:nth-child(1) {
+    color: #e67e22;  /* Timing */
 }
 
 .summary p:nth-child(2) {
-    color: #2ecc71;
+    color: #e74c3c;  /* Rounds */
 }
 
-.summary p:last-child {
-    color: #9b59b6;
+.summary p:nth-child(3) {
+    color: #2ecc71;  /* Question */
+}
+
+.summary p:nth-child(4) {
+    color: #9b59b6;  /* Answer */
 }
 
 @media (max-width: 768px) {
@@ -522,4 +526,63 @@ select:focus {
 /* Also remove any inline background colors */
 [style*="background-color"] {
     background-color: transparent !important;
+}
+
+/* Style for date and time in comparison view */
+.comparison-item .match-date-time {
+    display: inline-block;
+    margin-right: 5px;
+}
+
+/* Hide date and time in simplified view */
+.comparison-item.simplified .match-date-time {
+    display: none !important;
+}
+
+/* Show date and time when simplified view is toggled off */
+#simplifiedView:not(:checked) ~ #comparisonDisplay .match-date-time {
+    display: inline-block !important;
+}
+
+/* Style for date and time in all views */
+.match-date-time {
+    display: inline-block !important;
+    margin-right: 5px;
+    color: #2c3e50 !important;
+    background-color: #f8f9fa !important;
+    padding: 2px 5px !important;
+    border-radius: 3px !important;
+    font-weight: bold;
+}
+
+/* Only hide date-time in simplified comparison view */
+.comparison-item.simplified .match-date-time {
+    display: none !important;
+}
+
+/* Force display of date-time in comparison view when not simplified */
+.comparison-item:not(.simplified) .match-date-time {
+    display: inline-block !important;
+}
+
+.rounds {
+    margin-top: 12px;
+    padding: 12px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border-left: 2px solid #e74c3c;
+    font-family: 'Consolas', monospace;
+    font-size: 13px;
+    color: #000;
+}
+
+.timing {
+    margin-top: 12px;
+    padding: 12px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border-left: 2px solid #3498db;
+    font-family: 'Consolas', monospace;
+    font-size: 13px;
+    color: #000;
 }

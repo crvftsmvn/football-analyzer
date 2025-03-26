@@ -246,19 +246,23 @@ def format_match_data(df_season, full_df):
                     md_games['DateOnly'] = pd.to_datetime(md_games['Date']).dt.date
                     timing = md_games.groupby('DateOnly').size().tolist()
                     
+                    # Get distinct round numbers from hRnd column
+                    rounds = sorted(md_games['hRnd'].unique().tolist())
+                    # Convert to integers and remove any decimal places
+                    rounds = [int(float(round_num)) for round_num in rounds]
+                    rounds_str = f"Rounds [{len(rounds)}][{', '.join(map(str, rounds))}]"
+                    
                     # Find matching games but don't use their colors
                     odds_colors = find_matching_games(matches)
                     
-                    # Don't add color tags to matches
-                    colored_matches = matches.copy()  # Just use the original matches
-                    
-                    formatted_data[f"Matchday {md}"] = {
-                        'matches': colored_matches,
-                        'summary': {
-                            'timing': timing,
-                            'question': h2h_results,
-                            'out': current_results
-                        }
+                    # Format the matchday data
+                    formatted_data[md] = {
+                        'matches': matches,
+                        'timing': timing,
+                        'odds_colors': odds_colors,
+                        'rounds': rounds_str,
+                        'question': h2h_results,
+                        'out': current_results
                     }
             except Exception as e:
                 print(f"Error processing matchday {md}: {str(e)}")
