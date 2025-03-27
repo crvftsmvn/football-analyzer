@@ -336,6 +336,38 @@ def get_data(league):
                 "data": formatted_data
             })
             
+        elif league == 'German Bundesliga':
+            file_path = os.path.join(data_dir, 'GermanBundesliga.csv')
+            print(f"Looking for file at: {file_path}")
+            if os.path.exists(file_path):
+                try:
+                    full_df = pd.read_csv(file_path)
+                    print("Successfully loaded German Bundesliga data")
+                    
+                    # Get seasons
+                    seasons = sorted(full_df['Season'].unique().tolist())
+                    
+                    # Get the selected season from query parameter
+                    selected_season = request.args.get('season')
+                    
+                    if selected_season:
+                        print(f"Processing season: {selected_season}")
+                        df_season = full_df[full_df['Season'] == selected_season].copy()
+                        formatted_data = format_match_data(df_season, full_df)
+                    else:
+                        formatted_data = {}
+                    
+                    return jsonify({
+                        "seasons": seasons,
+                        "data": formatted_data
+                    })
+                except Exception as e:
+                    print(f"Error processing German Bundesliga data: {str(e)}")
+                    return jsonify({"error": f"Error processing data: {str(e)}"}), 500
+            else:
+                print(f"File not found: {file_path}")
+                return jsonify({'error': 'League not found'})
+            
         return jsonify({"error": "League not found"}), 404
         
     except Exception as e:
