@@ -322,45 +322,39 @@ function displayData(data) {
     removeMatchColors();
 }
 
-function displayComparison(matchdays) {
-    const comparisonDiv = document.getElementById('comparisonDisplay');
+function displayComparison(selectedMatchdays) {
+    console.log('Displaying comparison for:', selectedMatchdays);
+    console.log('Global data:', globalData);
     
-    console.log('Attempting comparison with matchdays:', matchdays);
-    console.log('Global data available:', globalData !== null);
+    const comparisonDisplay = document.getElementById('comparisonDisplay');
+    comparisonDisplay.innerHTML = '';
     
-    if (!globalData) {
-        console.error('No global data available for comparison');
-        return;
-    }
-
-    console.log('Available matchdays in global data:', Object.keys(globalData));
+    // Create a flex container for the comparison
+    const flexContainer = document.createElement('div');
+    flexContainer.className = 'comparison-container';
     
-    let html = '';
-    matchdays.forEach(matchday => {
-        console.log(`Processing matchday: ${matchday}`);
-        // Ensure consistent matchday format
-        const formattedMatchday = `Matchday ${parseInt(matchday.split(' ')[1])}`;
+    selectedMatchdays.forEach(matchday => {
+        // Extract the matchday number from the format "Matchday X"
+        const matchdayNum = matchday.split(' ')[1];
+        console.log('Processing matchday:', matchdayNum);
         
-        if (globalData[formattedMatchday]) {
-            console.log(`Found data for matchday: ${formattedMatchday}`);
-            html += createMatchdayHTML(formattedMatchday, globalData, true);
+        if (globalData && globalData[matchdayNum]) {
+            console.log('Found data for matchday:', matchdayNum);
+            const matchdayData = globalData[matchdayNum];
+            const matchdayHtml = createMatchdayHTML(matchday, matchdayData, true);
+            flexContainer.innerHTML += matchdayHtml;
         } else {
-            console.error(`Matchday ${formattedMatchday} not found in global data. Available keys:`, Object.keys(globalData));
+            console.error('No data found for matchday:', matchdayNum);
         }
     });
     
-    if (html) {
-        comparisonDiv.innerHTML = html;
-        
-        // Ensure dates are visible in comparison view
-        setTimeout(() => {
-            ensureComparisonDates();
-            removeMatchColors();
-        }, 500);
-    } else {
-        console.error('No HTML generated for comparison');
-        comparisonDiv.innerHTML = '<p class="error">No data available for selected matchdays</p>';
-    }
+    comparisonDisplay.appendChild(flexContainer);
+    
+    // Add dates to matches after rendering
+    addDatesToMatches();
+    
+    // Remove any background colors
+    removeMatchColors();
 }
 
 function initializeMatchdayAnalysis() {
