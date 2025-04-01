@@ -586,3 +586,8 @@ select:focus {
     font-size: 13px;
     color: #000;
 }
+
+.h-rnd {
+    color: #e74c3c;
+    font-weight: bold;
+}

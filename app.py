@@ -235,7 +235,10 @@ def format_match_data(df_season, full_df):
                         dr_odd = float(game['DrOd']) if pd.notnull(game['DrOd']) else 0.0
                         aw_odd = float(game['AwOd']) if pd.notnull(game['AwOd']) else 0.0
                         
-                        match_str += f"{result_map[ftr]} [{hm_odd:.2f}, {dr_odd:.2f}, {aw_odd:.2f}]"
+                        # Get hRnd value
+                        h_rnd = int(float(game['hRnd'])) if pd.notnull(game['hRnd']) else 0
+                        
+                        match_str += f"{result_map[ftr]} [{hm_odd:.2f}, {dr_odd:.2f}, {aw_odd:.2f}] <span class='h-rnd'>[{h_rnd}]</span>"
                         matches.append(match_str)
                     except Exception as e:
                         print(f"Error processing match: {str(e)}")
