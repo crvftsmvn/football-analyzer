@@ -299,27 +299,92 @@ function createMatchdayHTML(matchday, data, isComparison = false) {
 }
 
 function displayData(data) {
-    const displayDiv = document.getElementById('dataDisplay');
+    const container = document.getElementById('dataDisplay');
+    container.innerHTML = '';
     
-    // Sort matchdays by number
-    const sortedMatchdays = Object.keys(data).sort((a, b) => {
-        const numA = parseInt(a);
-        const numB = parseInt(b);
-        return numA - numB;
+    // Sort matchdays by season and matchday number
+    const sortedMatchdays = Object.keys(data.matchdays).sort((a, b) => {
+        const [seasonA, mdA] = a.split('-');
+        const [seasonB, mdB] = b.split('-');
+        if (seasonA !== seasonB) return seasonB - seasonA;
+        return parseInt(mdA) - parseInt(mdB);
     });
     
-    let html = '';
-    sortedMatchdays.forEach(matchday => {
-        html += createMatchdayHTML(`Matchday ${matchday}`, data[matchday], false);
+    // Create container for all matchdays
+    const allMatchdaysContainer = document.createElement('div');
+    allMatchdaysContainer.className = 'all-matchdays';
+    
+    // Process each matchday
+    sortedMatchdays.forEach(matchdayKey => {
+        const matchday = data.matchdays[matchdayKey];
+        const matchdayContainer = document.createElement('div');
+        matchdayContainer.className = 'matchday-container';
+        
+        // Create matchday header
+        const header = document.createElement('h2');
+        header.textContent = `Season ${matchday.season} - Matchday ${matchday.matchday}`;
+        matchdayContainer.appendChild(header);
+        
+        // Create table for matches
+        const table = document.createElement('table');
+        table.className = 'matchday-table';
+        
+        // Create table header
+        const thead = document.createElement('thead');
+        thead.innerHTML = `
+            <tr>
+                <th>Date</th>
+                <th>Home Team (Pos/Pts) [G:S/C]</th>
+                <th>Away Team (Pos/Pts) [G:S/C]</th>
+                <th>Result</th>
+                <th>Odds</th>
+                <th>Round</th>
+                <th>Previous Results</th>
+            </tr>
+        `;
+        table.appendChild(thead);
+        
+        // Create table body
+        const tbody = document.createElement('tbody');
+        
+        // Process each match
+        matchday.matches.forEach(match => {
+            const row = document.createElement('tr');
+            
+            // Format previous results
+            const homePrevResult = match.home_prev_result ? `${match.home_prev_result}${match.home_prev_loc}` : '-';
+            const awayPrevResult = match.away_prev_result ? `${match.away_prev_result}${match.away_prev_loc}` : '-';
+            
+            row.innerHTML = `
+                <td>${match.date}</td>
+                <td>${match.home_team} (<span class="team-position">${match.home_position}</span>/<span class="team-points">${match.home_points}</span>) [<span class="team-goals">${match.home_goals_scored}/${match.home_goals_conceded}</span>]</td>
+                <td>${match.away_team} (<span class="team-position">${match.away_position}</span>/<span class="team-points">${match.away_points}</span>) [<span class="team-goals">${match.away_goals_scored}/${match.away_goals_conceded}</span>]</td>
+                <td class="result-${match.result.toLowerCase()}">${match.result}</td>
+                <td>${match.odds.home.toFixed(2)}/${match.odds.draw.toFixed(2)}/${match.odds.away.toFixed(2)}</td>
+                <td class="h-rnd">${match.h_rnd}</td>
+                <td>${homePrevResult} | ${awayPrevResult}</td>
+            `;
+            tbody.appendChild(row);
+        });
+        
+        table.appendChild(tbody);
+        matchdayContainer.appendChild(table);
+        
+        // Create summary section
+        const summary = document.createElement('div');
+        summary.className = 'summary';
+        summary.innerHTML = `
+            <p>Timing: ${matchday.timing.join(', ')}</p>
+            <p>${matchday.rounds}</p>
+            <p>Question: ${matchday.question.join(', ')}</p>
+            <p>Answer: ${matchday.out.join(', ')}</p>
+        `;
+        matchdayContainer.appendChild(summary);
+        
+        allMatchdaysContainer.appendChild(matchdayContainer);
     });
     
-    displayDiv.innerHTML = html;
-    
-    // Add dates to matches after rendering
-    addDatesToMatches();
-    
-    // Remove any background colors
-    removeMatchColors();
+    container.appendChild(allMatchdaysContainer);
 }
 
 function displayComparison(selectedMatchdays) {
@@ -568,4 +633,60 @@ function ensureComparisonDates() {
             dateTime.style.display = simplifiedView ? 'none' : 'inline-block';
         }
     });
+}
+
+function displayMatchday(matchdayData) {
+    const matchdayContainer = document.getElementById('matchdayContainer');
+    matchdayContainer.innerHTML = '';
+    
+    // Create table
+    const table = document.createElement('table');
+    table.className = 'matchday-table';
+    
+    // Create table header
+    const thead = document.createElement('thead');
+    thead.innerHTML = `
+        <tr>
+            <th>Date</th>
+            <th>Home Team</th>
+            <th>Away Team</th>
+            <th>Result</th>
+            <th>Odds (H/D/A)</th>
+            <th>Round</th>
+        </tr>
+    `;
+    table.appendChild(thead);
+    
+    // Create table body
+    const tbody = document.createElement('tbody');
+    
+    // Add each match as a row
+    matchdayData.matches.forEach(match => {
+        const row = document.createElement('tr');
+        
+        // Format odds
+        const oddsStr = `[${match.odds.home.toFixed(2)}, ${match.odds.draw.toFixed(2)}, ${match.odds.away.toFixed(2)}]`;
+        
+        // Format result with color
+        let resultClass = '';
+        switch(match.result) {
+            case 'H': resultClass = 'result-home'; break;
+            case 'A': resultClass = 'result-away'; break;
+            case 'D': resultClass = 'result-draw'; break;
+        }
+        
+        row.innerHTML = `
+            <td>${match.date}</td>
+            <td>${match.home_team}</td>
+            <td>${match.away_team}</td>
+            <td class="${resultClass}">${match.result}</td>
+            <td>${oddsStr}</td>
+            <td class="h-rnd">${match.h_rnd}</td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+    
+    table.appendChild(tbody);
+    matchdayContainer.appendChild(table);
 }

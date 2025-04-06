@@ -5,73 +5,104 @@ import numpy as np
 
 app = Flask(__name__)
 
-def get_previous_game_result(df, team, current_md, current_season):
+def get_team_position(team, date, df):
+    """Calculate team's points based on completed matches before the current matchday in the same season."""
     try:
-        if current_md == 1:
-            # Parse current season years (e.g., "2022-2023" -> 2022)
-            current_year = int(current_season.split('-')[0])
-            prev_season = f"{current_year-1}-{current_year}"
-            
-            print(f"Looking for {team} in previous season: {prev_season}")
-            print(f"Available seasons: {df['Season'].unique()}")
-            
-            # Get data from previous season's last matchday
-            prev_season_df = df[df['Season'] == prev_season].copy()
-            
-            if prev_season_df.empty:
-                print(f"No data found for previous season: {prev_season}")
-                return None, None
-                
-            # Get the last matchday of previous season
-            last_md = prev_season_df['MD'].max()
-            print(f"Last matchday of previous season: {last_md}")
-            
-            prev_games = prev_season_df[
-                (prev_season_df['MD'] == last_md) & 
-                ((prev_season_df['Home'] == team) | (prev_season_df['Away'] == team))
-            ]
-            
-            if prev_games.empty:
-                print(f"No games found for {team} in matchday {last_md} of season {prev_season}")
-                return None, None
-                
-            print(f"Found previous game for {team}: {prev_games.iloc[0]['Home']} vs {prev_games.iloc[0]['Away']}")
-        else:
-            # For other matchdays, look at current season's previous games
-            current_season_df = df[df['Season'] == current_season].copy()
-            current_season_df['MD'] = pd.to_numeric(current_season_df['MD'], errors='coerce')
-            
-            prev_games = current_season_df[
-                (current_season_df['MD'].notna()) &
-                (current_season_df['MD'] < current_md) & 
-                ((current_season_df['Home'] == team) | (current_season_df['Away'] == team))
-            ].sort_values('MD', ascending=False)
+        # Get the season from the current date
+        current_season = df[df['Date'] == date]['Season'].iloc[0]
         
-        if prev_games.empty:
-            return None, None
-            
-        last_game = prev_games.iloc[0]
-        was_home = last_game['Home'] == team
-        position = 'H' if was_home else 'A'
+        # Get all matches before the current date in the same season
+        past_matches = df[
+            (df['Date'] < date) & 
+            (df['Season'] == current_season)
+        ]
         
-        try:
-            ftr = int(float(last_game['FTR']))
-            if ftr == 0:
-                result = 'D'
-            elif ftr == 1:
-                result = 'W' if was_home else 'L'
-            else:  # ftr == 2
-                result = 'L' if was_home else 'W'
-        except (ValueError, TypeError):
-            print(f"Invalid FTR value: {last_game['FTR']}")
-            return None, None
-            
-        return position, result
+        # Initialize points
+        points = 0
         
+        # Calculate points from past matches
+        for _, match in past_matches.iterrows():
+            if match['Home'] == team:
+                if match['FTR'] == '1':  # Home win
+                    points += 3
+                elif match['FTR'] == '0':  # Draw
+                    points += 1
+            elif match['Away'] == team:
+                if match['FTR'] == '2':  # Away win
+                    points += 3
+                elif match['FTR'] == '0':  # Draw
+                    points += 1
+        
+        return points
     except Exception as e:
-        print(f"Error in get_previous_game_result: {str(e)}")
-        print(f"Team: {team}, MD: {current_md}, Current Season: {current_season}")
+        print(f"Error calculating team points for {team}: {str(e)}")
+        return 0
+
+def get_previous_game_result(df, team, current_date, current_season):
+    """Get team's previous game result and location"""
+    try:
+        # Get all matches up to the current date
+        past_matches = df[
+            (df['Season'] == current_season) & 
+            (df['Date'] < current_date) &
+            ((df['Home'] == team) | (df['Away'] == team))
+        ].sort_values('Date', ascending=False)
+        
+        if past_matches.empty:
+            return None, None
+        
+        last_game = past_matches.iloc[0]
+        was_home = last_game['Home'] == team
+        ftr = last_game['FTR']
+        
+        # Determine result
+        if was_home:
+            if ftr == '1':
+                result = 'W'
+            elif ftr == '2':
+                result = 'L'
+            else:
+                result = 'D'
+        else:
+            if ftr == '2':
+                result = 'W'
+            elif ftr == '1':
+                result = 'L'
+            else:
+                result = 'D'
+        
+        location = 'H' if was_home else 'A'
+        return result, location
+    except Exception as e:
+        print(f"Error getting previous game result: {str(e)}")
         return None, None
+
+def get_matchday_goals(df, current_date, current_season, current_md, team):
+    """Get total goals scored and conceded by a team on current matchday up to the current match"""
+    try:
+        # Get all matches on current matchday up to the current date
+        current_matches = df[
+            (df['Season'] == current_season) & 
+            (df['MD'] == current_md) &
+            (df['Date'] <= current_date)
+        ]
+        
+        # Get matches where team is home
+        home_matches = current_matches[current_matches['Home'] == team]
+        # Get matches where team is away
+        away_matches = current_matches[current_matches['Away'] == team]
+        
+        # Calculate goals scored and conceded
+        goals_scored = home_matches['HomeG'].sum() + away_matches['AwayG'].sum()
+        goals_conceded = home_matches['AwayG'].sum() + away_matches['HomeG'].sum()
+        
+        return {
+            'scored': int(goals_scored),
+            'conceded': int(goals_conceded)
+        }
+    except Exception as e:
+        print(f"Error getting matchday goals for {team}: {str(e)}")
+        return None
 
 def are_odds_similar(odds1, odds2, threshold=0.05):
     """Check if two sets of odds are similar (within threshold) regardless of order"""
@@ -127,154 +158,233 @@ def find_matching_games(matches_data):
     
     return odds_colors
 
-def format_match_data(df_season, full_df):
+def format_match_data(df):
     try:
-        # Create a deep copy to avoid SettingWithCopyWarning
-        df_season = df_season.copy(deep=True)
-        df_season['MD'] = pd.to_numeric(df_season['MD'], errors='coerce')
-        current_season = df_season['Season'].iloc[0]  # Get the current season
-        df_season = df_season.sort_values('MD')
-        formatted_data = {}
+        # Convert date to datetime
+        df['Date'] = pd.to_datetime(df['Date'])
         
-        max_matchday = int(df_season['MD'].max())
+        # Sort by date
+        df = df.sort_values('Date')
         
-        for md in range(1, max_matchday + 1):
-            try:
-                md_games = df_season[df_season['MD'] == float(md)].copy(deep=True)  # Create a copy here
-                if md_games.empty:
-                    continue
-                
-                # Sort games by datetime and home team (both ascending)
-                md_games.loc[:, 'DateTime'] = pd.to_datetime(md_games['Date'])  # Use .loc to avoid warning
-                md_games = md_games.sort_values(['DateTime', 'Home'], ascending=[True, True])
-                matches = []
+        # Get unique seasons and convert to list of strings
+        seasons = [str(season) for season in sorted(df['Season'].unique(), reverse=True)]
+        
+        # Initialize result dictionary
+        result = {
+            'seasons': seasons,
+            'matchdays': {}
+        }
+        
+        # Process each season
+        for season in seasons:
+            season_data = df[df['Season'] == season]
+            
+            # Get unique matchdays and convert to list of integers
+            matchdays = [int(md) for md in sorted(season_data['MD'].unique())]
+            
+            # Initialize team stats dictionary for the season
+            team_stats = {}
+            
+            # Process each matchday
+            for matchday in matchdays:
+                matchday_data = season_data[season_data['MD'] == matchday]
                 
                 # Initialize counters for results
-                current_results = [0, 0, 0]  # [home_wins, away_wins, draws]
-                h2h_results = [0, 0, 0]  # [home_wins, away_wins, draws]
+                current_results = {'H': 0, 'A': 0, 'D': 0}  # home_wins, away_wins, draws
+                h2h_results = {'H': 0, 'A': 0, 'D': 0}  # home_wins, away_wins, draws
                 
-                for _, game in md_games.iterrows():
+                # Format matches for this matchday
+                matches = []
+                for _, game in matchday_data.iterrows():
                     try:
-                        # Process match result
-                        ftr = int(float(game['FTR']))
+                        # Get basic match info
+                        home_team = str(game['Home'])
+                        away_team = str(game['Away'])
+                        current_date = game['Date']
+                        
+                        # Initialize stats for teams if not already in dictionary
+                        if home_team not in team_stats:
+                            team_stats[home_team] = {
+                                'points': 0,
+                                'goals_scored': 0,
+                                'goals_conceded': 0,
+                                'prev_result': None,
+                                'prev_loc': None,
+                                'h2h_points': {},
+                                'h2h_away_goals': {}
+                            }
+                        if away_team not in team_stats:
+                            team_stats[away_team] = {
+                                'points': 0,
+                                'goals_scored': 0,
+                                'goals_conceded': 0,
+                                'prev_result': None,
+                                'prev_loc': None,
+                                'h2h_points': {},
+                                'h2h_away_goals': {}
+                            }
+                        
+                        # Convert FTR to proper format (1=H, 2=A, 0=D)
+                        ftr = str(game['FTR'])
+                        if ftr == '1':
+                            ftr = 'H'
+                        elif ftr == '2':
+                            ftr = 'A'
+                        else:
+                            ftr = 'D'
+                            
+                        date = game['Date'].strftime('%Y-%m-%d %H:%M')
                         
                         # Update current results
-                        if ftr == 1:  # Home win
-                            current_results[0] += 1
-                        elif ftr == 2:  # Away win
-                            current_results[1] += 1
-                        else:  # Draw
-                            current_results[2] += 1
+                        current_results[ftr] += 1
                         
                         # Process head-to-head results
-                        try:
-                            if pd.notnull(game['hScre']):
-                                scores = str(game['hScre']).split('-')
-                                home_score = int(float(scores[0]))
-                                away_score = int(float(scores[1]))
-                                
-                                if home_score > away_score:
-                                    h2h_results[0] += 1
-                                elif home_score < away_score:
-                                    h2h_results[1] += 1
-                                else:
-                                    h2h_results[2] += 1
-                        except:
-                            pass  # Skip if h2h score processing fails
-                        
-                        # Format date and time
-                        try:
-                            # Get date from the Date column
-                            if 'Date' in game and pd.notnull(game['Date']):
-                                date_str = str(game['Date'])
-                                
-                                # Try to get time information
-                                time_str = ""
-                                if 'Time' in game and pd.notnull(game['Time']):
-                                    time_str = str(game['Time'])
-                                elif 'DateTime' in game and pd.notnull(game['DateTime']):
-                                    # If we have a DateTime column, extract the time part
-                                    time_str = str(game['DateTime'].time())
-                                else:
-                                    # If no time is available, use a default time
-                                    time_str = "15:00"  # Default to 3 PM
-                                
-                                # Format with both date and time
-                                date_time_str = f"DATE_INFO:{date_str} {time_str}"
-                            else:
-                                date_time_str = "DATE_INFO:Unknown Unknown"
-                            
-                            # Format with a distinctive prefix that won't be confused with other brackets
-                            date_time_str = f"<<{date_time_str}>>"
-                            print(f"Adding date and time: {date_time_str} to match")  # Debug print
-                        except Exception as e:
-                            print(f"Error formatting date/time: {str(e)}")
-                            date_time_str = "<<DATE_INFO:Unknown Unknown>>"
-                        
-                        # Get previous game results without weights
-                        if md == 1:
-                            # For matchday 1, always show previous results
-                            home_pos, home_prev = get_previous_game_result(full_df, game['Home'], md, current_season)
-                            away_pos, away_prev = get_previous_game_result(full_df, game['Away'], md, current_season)
-                            
-                            home_info = f"<{home_pos} {home_prev}>" if home_pos and home_prev else "<null null>"
-                            away_info = f"<{away_pos} {away_prev}>" if away_pos and away_prev else "<null null>"
-                            match_str = f"{date_time_str}{home_info} {game['Home']} vs {away_info} {game['Away']} => "
+                        if game['HomeG'] > game['AwayG']:
+                            h2h_results['H'] += 1
+                            # Update h2h points
+                            if away_team not in team_stats[home_team]['h2h_points']:
+                                team_stats[home_team]['h2h_points'][away_team] = 0
+                            if home_team not in team_stats[away_team]['h2h_points']:
+                                team_stats[away_team]['h2h_points'][home_team] = 0
+                            team_stats[home_team]['h2h_points'][away_team] += 3
+                        elif game['HomeG'] < game['AwayG']:
+                            h2h_results['A'] += 1
+                            # Update h2h points
+                            if away_team not in team_stats[home_team]['h2h_points']:
+                                team_stats[home_team]['h2h_points'][away_team] = 0
+                            if home_team not in team_stats[away_team]['h2h_points']:
+                                team_stats[away_team]['h2h_points'][home_team] = 0
+                            team_stats[away_team]['h2h_points'][home_team] += 3
                         else:
-                            home_pos, home_prev = get_previous_game_result(df_season, game['Home'], md, current_season)
-                            away_pos, away_prev = get_previous_game_result(df_season, game['Away'], md, current_season)
-                            
-                            home_info = f"<{home_pos} {home_prev}>" if home_pos and home_prev else ""
-                            away_info = f"<{away_pos} {away_prev}>" if away_pos and away_prev else ""
-                            match_str = f"{date_time_str}{home_info} {game['Home']} vs {away_info} {game['Away']} => "
+                            h2h_results['D'] += 1
+                            # Update h2h points for draw
+                            if away_team not in team_stats[home_team]['h2h_points']:
+                                team_stats[home_team]['h2h_points'][away_team] = 0
+                            if home_team not in team_stats[away_team]['h2h_points']:
+                                team_stats[away_team]['h2h_points'][home_team] = 0
+                            team_stats[home_team]['h2h_points'][away_team] += 1
+                            team_stats[away_team]['h2h_points'][home_team] += 1
                         
-                        result_map = {0: 'D', 1: 'H', 2: 'A'}
+                        # Update h2h away goals
+                        if away_team not in team_stats[home_team]['h2h_away_goals']:
+                            team_stats[home_team]['h2h_away_goals'][away_team] = 0
+                        if home_team not in team_stats[away_team]['h2h_away_goals']:
+                            team_stats[away_team]['h2h_away_goals'][home_team] = 0
+                        team_stats[away_team]['h2h_away_goals'][home_team] += game['AwayG']
                         
-                        # Add odds
+                        # Get odds and convert to float
                         hm_odd = float(game['HmOd']) if pd.notnull(game['HmOd']) else 0.0
                         dr_odd = float(game['DrOd']) if pd.notnull(game['DrOd']) else 0.0
                         aw_odd = float(game['AwOd']) if pd.notnull(game['AwOd']) else 0.0
                         
-                        # Get hRnd value
-                        h_rnd = int(float(game['hRnd'])) if pd.notnull(game['hRnd']) else 0
+                        # Get hRnd value and convert to int
+                        h_rnd = int(game['hRnd']) if pd.notnull(game['hRnd']) else 0
                         
-                        match_str += f"{result_map[ftr]} [{hm_odd:.2f}, {dr_odd:.2f}, {aw_odd:.2f}] <span class='h-rnd'>[{h_rnd}]</span>"
-                        matches.append(match_str)
+                        # Calculate positions before this match
+                        teams = list(team_stats.keys())
+                        positions = {}
+                        
+                        # Sort teams by points, goal difference, goals scored, h2h points, and h2h away goals
+                        sorted_teams = sorted(teams, key=lambda x: (
+                            -team_stats[x]['points'],
+                            -(team_stats[x]['goals_scored'] - team_stats[x]['goals_conceded']),
+                            -team_stats[x]['goals_scored'],
+                            -sum(team_stats[x]['h2h_points'].values()),
+                            -sum(team_stats[x]['h2h_away_goals'].values())
+                        ))
+                        
+                        # Assign positions
+                        for i, team in enumerate(sorted_teams, 1):
+                            positions[team] = i
+                        
+                        # Create match object with additional stats
+                        match = {
+                            'date': date,
+                            'home_team': home_team,
+                            'away_team': away_team,
+                            'result': ftr,
+                            'odds': {
+                                'home': hm_odd,
+                                'draw': dr_odd,
+                                'away': aw_odd
+                            },
+                            'h_rnd': h_rnd,
+                            'home_points': team_stats[home_team]['points'],
+                            'away_points': team_stats[away_team]['points'],
+                            'home_position': positions[home_team],
+                            'away_position': positions[away_team],
+                            'home_goals_scored': team_stats[home_team]['goals_scored'],
+                            'home_goals_conceded': team_stats[home_team]['goals_conceded'],
+                            'away_goals_scored': team_stats[away_team]['goals_scored'],
+                            'away_goals_conceded': team_stats[away_team]['goals_conceded'],
+                            'home_prev_result': team_stats[home_team]['prev_result'],
+                            'home_prev_loc': team_stats[home_team]['prev_loc'],
+                            'away_prev_result': team_stats[away_team]['prev_result'],
+                            'away_prev_loc': team_stats[away_team]['prev_loc']
+                        }
+                        matches.append(match)
+                        
+                        # Update stats after the match
+                        if ftr == 'H':  # Home win
+                            team_stats[home_team]['points'] += 3
+                            team_stats[home_team]['prev_result'] = 'W'
+                            team_stats[home_team]['prev_loc'] = 'H'
+                            team_stats[away_team]['prev_result'] = 'L'
+                            team_stats[away_team]['prev_loc'] = 'A'
+                        elif ftr == 'A':  # Away win
+                            team_stats[away_team]['points'] += 3
+                            team_stats[away_team]['prev_result'] = 'W'
+                            team_stats[away_team]['prev_loc'] = 'A'
+                            team_stats[home_team]['prev_result'] = 'L'
+                            team_stats[home_team]['prev_loc'] = 'H'
+                        else:  # Draw
+                            team_stats[home_team]['points'] += 1
+                            team_stats[away_team]['points'] += 1
+                            team_stats[home_team]['prev_result'] = 'D'
+                            team_stats[home_team]['prev_loc'] = 'H'
+                            team_stats[away_team]['prev_result'] = 'D'
+                            team_stats[away_team]['prev_loc'] = 'A'
+                        
+                        # Update goals
+                        team_stats[home_team]['goals_scored'] += game['HomeG']
+                        team_stats[home_team]['goals_conceded'] += game['AwayG']
+                        team_stats[away_team]['goals_scored'] += game['AwayG']
+                        team_stats[away_team]['goals_conceded'] += game['HomeG']
+                        
                     except Exception as e:
                         print(f"Error processing match: {str(e)}")
                         continue
                 
-                if matches:
-                    # Get timing data
-                    md_games['DateOnly'] = pd.to_datetime(md_games['Date']).dt.date
-                    timing = md_games.groupby('DateOnly').size().tolist()
-                    
-                    # Get distinct round numbers from hRnd column
-                    rounds = sorted(md_games['hRnd'].unique().tolist())
-                    # Convert to integers and remove any decimal places
-                    rounds = [int(float(round_num)) for round_num in rounds]
-                    rounds_str = f"Rounds [{len(rounds)}][{', '.join(map(str, rounds))}]"
-                    
-                    # Find matching games but don't use their colors
-                    odds_colors = find_matching_games(matches)
-                    
-                    # Format the matchday data
-                    formatted_data[md] = {
-                        'matches': matches,
-                        'timing': timing,
-                        'odds_colors': odds_colors,
-                        'rounds': rounds_str,
-                        'question': h2h_results,
-                        'out': current_results
-                    }
-            except Exception as e:
-                print(f"Error processing matchday {md}: {str(e)}")
-                continue
+                # Get timing data
+                timing = [int(x) for x in matchday_data.groupby('Date').size().tolist()]
+                
+                # Get rounds data
+                rounds = sorted([int(x) for x in matchday_data['hRnd'].unique().tolist()])
+                rounds_str = f"Rounds[{','.join(map(str, rounds))}]"
+                
+                # Create matchday object
+                matchday_key = f"{season}-{matchday:02d}"  # Pad matchday with leading zeros
+                result['matchdays'][matchday_key] = {
+                    'season': season,
+                    'matchday': matchday,
+                    'matches': matches,
+                    'timing': timing,
+                    'rounds': rounds_str,
+                    'question': [int(h2h_results['H']), int(h2h_results['A']), int(h2h_results['D'])],
+                    'out': [int(current_results['H']), int(current_results['A']), int(current_results['D'])]
+                }
         
-        return formatted_data
+        # Sort matchdays by season and matchday number
+        sorted_matchdays = {}
+        for key in sorted(result['matchdays'].keys(), key=lambda x: (x.split('-')[0], int(x.split('-')[1]))):
+            sorted_matchdays[key] = result['matchdays'][key]
+        
+        result['matchdays'] = sorted_matchdays
+        return result
+        
     except Exception as e:
         print(f"Error in format_match_data: {str(e)}")
-        raise
+        return None
 
 @app.route('/test')
 def test():
@@ -317,6 +427,8 @@ def get_data(league):
             try:
                 full_df = pd.read_csv(file_path)
                 print(f"Successfully loaded {league} data")
+                print("Sample data:")
+                print(full_df.head())
             except Exception as e:
                 print(f"Error reading CSV: {str(e)}")
                 return jsonify({"error": f"Error reading data: {str(e)}"}), 500
@@ -330,9 +442,18 @@ def get_data(league):
             if selected_season:
                 print(f"Processing season: {selected_season}")
                 df_season = full_df[full_df['Season'] == selected_season].copy()
-                formatted_data = format_match_data(df_season, full_df)
+                formatted_data = format_match_data(df_season)
             else:
-                formatted_data = {}
+                # If no season is selected, format all data
+                print("No season selected, processing all data")
+                formatted_data = format_match_data(full_df)
+            
+            # Debug print the formatted data
+            print("Formatted data sample:")
+            if formatted_data and 'matchdays' in formatted_data:
+                for key, value in list(formatted_data['matchdays'].items())[:1]:
+                    print(f"Matchday {key}:")
+                    print(f"Matches: {value['matches'][:1] if value['matches'] else 'No matches'}")
             
             return jsonify({
                 "seasons": seasons,
@@ -346,6 +467,8 @@ def get_data(league):
                 try:
                     full_df = pd.read_csv(file_path)
                     print("Successfully loaded German Bundesliga data")
+                    print("Sample data:")
+                    print(full_df.head())
                     
                     # Get seasons
                     seasons = sorted(full_df['Season'].unique().tolist())
@@ -356,9 +479,18 @@ def get_data(league):
                     if selected_season:
                         print(f"Processing season: {selected_season}")
                         df_season = full_df[full_df['Season'] == selected_season].copy()
-                        formatted_data = format_match_data(df_season, full_df)
+                        formatted_data = format_match_data(df_season)
                     else:
-                        formatted_data = {}
+                        # If no season is selected, format all data
+                        print("No season selected, processing all data")
+                        formatted_data = format_match_data(full_df)
+                    
+                    # Debug print the formatted data
+                    print("Formatted data sample:")
+                    if formatted_data and 'matchdays' in formatted_data:
+                        for key, value in list(formatted_data['matchdays'].items())[:1]:
+                            print(f"Matchday {key}:")
+                            print(f"Matches: {value['matches'][:1] if value['matches'] else 'No matches'}")
                     
                     return jsonify({
                         "seasons": seasons,

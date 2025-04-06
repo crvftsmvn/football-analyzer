@@ -94,6 +94,15 @@ select:focus {
     background-color: #f8f9fa;
 }
 
+.matchday-header,
+.matchday-stats,
+.timing-info,
+.rounds-info,
+.question-info,
+.answer-info {
+    display: none;
+}
+
 .summary {
     margin-top: 12px;
     padding: 12px;
@@ -589,5 +598,231 @@ select:focus {
 
 .h-rnd {
     color: #e74c3c;
+    font-weight: bold;
+}
+
+.matchday-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    font-family: 'Consolas', monospace;
+    font-size: 14px;
+}
+
+.matchday-table th,
+.matchday-table td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.matchday-table th {
+    background-color: #f2f2f2;
+    padding: 12px;
+    text-align: left;
+    font-weight: bold;
+}
+
+.matchday-table tr:hover {
+    background-color: #f5f5f5;
+}
+
+.matchday-table .result-home {
+    color: #e74c3c;
+    font-weight: bold;
+}
+
+.matchday-table .result-away {
+    color: #3498db;
+    font-weight: bold;
+}
+
+.matchday-table .result-draw {
+    color: #2ecc71;
+    font-weight: bold;
+}
+
+.matchday-table .h-rnd {
+    color: #e67e22;
+}
+
+/* Style for team positions and points */
+.matchday-table td:nth-child(2),
+.matchday-table td:nth-child(3) {
+    font-weight: bold;
+}
+
+.matchday-table td:nth-child(2) span,
+.matchday-table td:nth-child(3) span {
+    color: #7f8c8d;
+    font-weight: normal;
+    font-size: 0.9em;
+}
+
+.matchday-table td:nth-child(2) span::before,
+.matchday-table td:nth-child(3) span::before {
+    content: "(";
+}
+
+.matchday-table td:nth-child(2) span::after,
+.matchday-table td:nth-child(3) span::after {
+    content: ")";
+}
+
+/* Style for previous results */
+.matchday-table td:nth-child(7) {
+    font-family: 'Consolas', monospace;
+    color: #34495e;
+}
+
+/* Style for matchday goals */
+.matchday-table td:nth-child(8) {
+    font-weight: bold;
+    color: #8e44ad;
+}
+
+.summary {
+    margin-top: 12px;
+    padding: 12px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border-left: 2px solid #3498db;
+}
+
+.summary p {
+    margin: 6px 0;
+    font-family: 'Consolas', monospace;
+    font-size: 13px;
+    color: #000;
+}
+
+.summary p:nth-child(1) {
+    color: #e67e22;  /* Timing */
+}
+
+.summary p:nth-child(2) {
+    color: #e74c3c;  /* Rounds */
+}
+
+.summary p:nth-child(3) {
+    color: #2ecc71;  /* Question */
+}
+
+.summary p:nth-child(4) {
+    color: #9b59b6;  /* Answer */
+}
+
+.matchdays-container {
+    margin: 20px 0;
+}
+
+.matchday-section {
+    margin-bottom: 30px;
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.matchday-section h3 {
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 18px;
+}
+
+.matches-container {
+    margin-bottom: 15px;
+}
+
+.match {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    font-family: 'Consolas', monospace;
+    font-size: 14px;
+}
+
+.match .date {
+    width: 150px;
+    color: #666;
+}
+
+.match .teams {
+    flex: 1;
+    margin: 0 15px;
+}
+
+.match .result-home {
+    color: #e74c3c;
+    font-weight: bold;
+    margin: 0 15px;
+}
+
+.match .result-away {
+    color: #3498db;
+    font-weight: bold;
+    margin: 0 15px;
+}
+
+.match .result-draw {
+    color: #2ecc71;
+    font-weight: bold;
+    margin: 0 15px;
+}
+
+.match .odds {
+    color: #9b59b6;
+    margin: 0 15px;
+}
+
+.match .h-rnd {
+    color: #e67e22;
+    margin-left: 15px;
+}
+
+.summary {
+    margin-top: 12px;
+    padding: 12px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border-left: 2px solid #3498db;
+}
+
+.summary p {
+    margin: 6px 0;
+    font-family: 'Consolas', monospace;
+    font-size: 13px;
+    color: #000;
+}
+
+.summary p:nth-child(1) {
+    color: #e67e22;  /* Timing */
+}
+
+.summary p:nth-child(2) {
+    color: #e74c3c;  /* Rounds */
+}
+
+.summary p:nth-child(3) {
+    color: #2ecc71;  /* Question */
+}
+
+.summary p:nth-child(4) {
+    color: #9b59b6;  /* Answer */
+}
+
+.team-position {
+    color: #2ecc71;  /* Green */
+    font-weight: bold;
+}
+
+.team-points {
+    color: #e74c3c;  /* Red */
+    font-weight: bold;
+}
+
+.team-goals {
+    color: #3498db;  /* Blue */
     font-weight: bold;
 }
