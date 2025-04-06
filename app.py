@@ -201,6 +201,7 @@ def format_match_data(df):
                         home_team = str(game['Home'])
                         away_team = str(game['Away'])
                         current_date = game['Date']
+                        date = current_date.strftime('%Y-%m-%d %H:%M')
                         
                         # Initialize stats for teams if not already in dictionary
                         if home_team not in team_stats:
@@ -233,44 +234,50 @@ def format_match_data(df):
                         else:
                             ftr = 'D'
                             
-                        date = game['Date'].strftime('%Y-%m-%d %H:%M')
-                        
                         # Update current results
                         current_results[ftr] += 1
                         
                         # Process head-to-head results
-                        if game['HomeG'] > game['AwayG']:
-                            h2h_results['H'] += 1
-                            # Update h2h points
-                            if away_team not in team_stats[home_team]['h2h_points']:
-                                team_stats[home_team]['h2h_points'][away_team] = 0
-                            if home_team not in team_stats[away_team]['h2h_points']:
-                                team_stats[away_team]['h2h_points'][home_team] = 0
-                            team_stats[home_team]['h2h_points'][away_team] += 3
-                        elif game['HomeG'] < game['AwayG']:
-                            h2h_results['A'] += 1
-                            # Update h2h points
-                            if away_team not in team_stats[home_team]['h2h_points']:
-                                team_stats[home_team]['h2h_points'][away_team] = 0
-                            if home_team not in team_stats[away_team]['h2h_points']:
-                                team_stats[away_team]['h2h_points'][home_team] = 0
-                            team_stats[away_team]['h2h_points'][home_team] += 3
-                        else:
-                            h2h_results['D'] += 1
-                            # Update h2h points for draw
-                            if away_team not in team_stats[home_team]['h2h_points']:
-                                team_stats[home_team]['h2h_points'][away_team] = 0
-                            if home_team not in team_stats[away_team]['h2h_points']:
-                                team_stats[away_team]['h2h_points'][home_team] = 0
-                            team_stats[home_team]['h2h_points'][away_team] += 1
-                            team_stats[away_team]['h2h_points'][home_team] += 1
-                        
-                        # Update h2h away goals
-                        if away_team not in team_stats[home_team]['h2h_away_goals']:
-                            team_stats[home_team]['h2h_away_goals'][away_team] = 0
-                        if home_team not in team_stats[away_team]['h2h_away_goals']:
-                            team_stats[away_team]['h2h_away_goals'][home_team] = 0
-                        team_stats[away_team]['h2h_away_goals'][home_team] += game['AwayG']
+                        try:
+                            h_score = str(game['hScre']).split('-')
+                            h_home_goals = int(h_score[0])
+                            h_away_goals = int(h_score[1])
+                            
+                            if h_home_goals > h_away_goals:
+                                h2h_results['H'] += 1
+                                # Update h2h points
+                                if away_team not in team_stats[home_team]['h2h_points']:
+                                    team_stats[home_team]['h2h_points'][away_team] = 0
+                                if home_team not in team_stats[away_team]['h2h_points']:
+                                    team_stats[away_team]['h2h_points'][home_team] = 0
+                                team_stats[home_team]['h2h_points'][away_team] += 3
+                            elif h_home_goals < h_away_goals:
+                                h2h_results['A'] += 1
+                                # Update h2h points
+                                if away_team not in team_stats[home_team]['h2h_points']:
+                                    team_stats[home_team]['h2h_points'][away_team] = 0
+                                if home_team not in team_stats[away_team]['h2h_points']:
+                                    team_stats[away_team]['h2h_points'][home_team] = 0
+                                team_stats[away_team]['h2h_points'][home_team] += 3
+                            else:
+                                h2h_results['D'] += 1
+                                # Update h2h points for draw
+                                if away_team not in team_stats[home_team]['h2h_points']:
+                                    team_stats[home_team]['h2h_points'][away_team] = 0
+                                if home_team not in team_stats[away_team]['h2h_points']:
+                                    team_stats[away_team]['h2h_points'][home_team] = 0
+                                team_stats[home_team]['h2h_points'][away_team] += 1
+                                team_stats[away_team]['h2h_points'][home_team] += 1
+                            
+                            # Update h2h away goals
+                            if away_team not in team_stats[home_team]['h2h_away_goals']:
+                                team_stats[home_team]['h2h_away_goals'][away_team] = 0
+                            if home_team not in team_stats[away_team]['h2h_away_goals']:
+                                team_stats[away_team]['h2h_away_goals'][home_team] = 0
+                            team_stats[away_team]['h2h_away_goals'][home_team] += h_away_goals
+                        except Exception as e:
+                            print(f"Error processing h2h score: {e}")
+                            continue
                         
                         # Get odds and convert to float
                         hm_odd = float(game['HmOd']) if pd.notnull(game['HmOd']) else 0.0
@@ -302,7 +309,7 @@ def format_match_data(df):
                             'date': date,
                             'home_team': home_team,
                             'away_team': away_team,
-                            'result': ftr,
+                            'result': str(game['FTR']),
                             'odds': {
                                 'home': hm_odd,
                                 'draw': dr_odd,
@@ -325,13 +332,13 @@ def format_match_data(df):
                         matches.append(match)
                         
                         # Update stats after the match
-                        if ftr == 'H':  # Home win
+                        if str(game['FTR']) == '1':  # Home win
                             team_stats[home_team]['points'] += 3
                             team_stats[home_team]['prev_result'] = 'W'
                             team_stats[home_team]['prev_loc'] = 'H'
                             team_stats[away_team]['prev_result'] = 'L'
                             team_stats[away_team]['prev_loc'] = 'A'
-                        elif ftr == 'A':  # Away win
+                        elif str(game['FTR']) == '2':  # Away win
                             team_stats[away_team]['points'] += 3
                             team_stats[away_team]['prev_result'] = 'W'
                             team_stats[away_team]['prev_loc'] = 'A'
@@ -346,10 +353,10 @@ def format_match_data(df):
                             team_stats[away_team]['prev_loc'] = 'A'
                         
                         # Update goals
-                        team_stats[home_team]['goals_scored'] += game['HomeG']
-                        team_stats[home_team]['goals_conceded'] += game['AwayG']
-                        team_stats[away_team]['goals_scored'] += game['AwayG']
-                        team_stats[away_team]['goals_conceded'] += game['HomeG']
+                        team_stats[home_team]['goals_scored'] += h_home_goals
+                        team_stats[home_team]['goals_conceded'] += h_away_goals
+                        team_stats[away_team]['goals_scored'] += h_away_goals
+                        team_stats[away_team]['goals_conceded'] += h_home_goals
                         
                     except Exception as e:
                         print(f"Error processing match: {str(e)}")
