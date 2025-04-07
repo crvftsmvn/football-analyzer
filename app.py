@@ -160,14 +160,15 @@ def find_matching_games(matches_data):
 
 def format_match_data(df):
     try:
-        # Convert date to datetime
-        df['Date'] = pd.to_datetime(df['Date'])
+        print("Starting format_match_data")
+        # Convert date to datetime, handle invalid dates
+        df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
         
         # Sort by date
         df = df.sort_values('Date')
         
         # Get unique seasons and convert to list of strings
-        seasons = [str(season) for season in sorted(df['Season'].unique(), reverse=True)]
+        seasons = [str(season) for season in sorted(df['Season'].unique(), reverse=True) if pd.notna(season)]
         
         # Initialize result dictionary
         result = {
@@ -179,8 +180,14 @@ def format_match_data(df):
         for season in seasons:
             season_data = df[df['Season'] == season]
             
-            # Get unique matchdays and convert to list of integers
-            matchdays = [int(md) for md in sorted(season_data['MD'].unique())]
+            # Get unique matchdays and convert to list of integers, handle invalid values
+            matchdays = []
+            for md in sorted(season_data['MD'].unique()):
+                try:
+                    if pd.notna(md) and str(md).strip() != '-':
+                        matchdays.append(int(float(md)))
+                except:
+                    continue
             
             # Initialize team stats dictionary for the season
             team_stats = {}
@@ -198,9 +205,14 @@ def format_match_data(df):
                 for _, game in matchday_data.iterrows():
                     try:
                         # Get basic match info
-                        home_team = str(game['Home'])
-                        away_team = str(game['Away'])
+                        home_team = str(game['Home']).strip() if pd.notna(game['Home']) else "Unknown"
+                        away_team = str(game['Away']).strip() if pd.notna(game['Away']) else "Unknown"
+                        if home_team in ['-', ''] or away_team in ['-', '']:
+                            continue
+                            
                         current_date = game['Date']
+                        if pd.isna(current_date):
+                            continue
                         date = current_date.strftime('%Y-%m-%d %H:%M')
                         
                         # Initialize stats for teams if not already in dictionary
@@ -226,10 +238,10 @@ def format_match_data(df):
                             }
                         
                         # Convert FTR to proper format (1=H, 2=A, 0=D)
-                        ftr = str(game['FTR'])
-                        if ftr == '1':
+                        ftr = str(game['FTR']).strip() if pd.notna(game['FTR']) else '0'
+                        if ftr in ['1', 'H']:
                             ftr = 'H'
-                        elif ftr == '2':
+                        elif ftr in ['2', 'A']:
                             ftr = 'A'
                         else:
                             ftr = 'D'
@@ -239,13 +251,25 @@ def format_match_data(df):
                         
                         # Process head-to-head results
                         try:
-                            h_score = str(game['hScre']).split('-')
-                            h_home_goals = int(h_score[0])
-                            h_away_goals = int(h_score[1])
+                            h_score_str = str(game['hScre']).strip() if pd.notna(game['hScre']) else ''
+                            if not h_score_str or h_score_str == '-' or h_score_str == 'nan':
+                                h_home_goals = 0
+                                h_away_goals = 0
+                            else:
+                                h_score = h_score_str.split('-')
+                                if len(h_score) != 2:
+                                    h_home_goals = 0
+                                    h_away_goals = 0
+                                else:
+                                    try:
+                                        h_home_goals = int(h_score[0].strip())
+                                        h_away_goals = int(h_score[1].strip())
+                                    except ValueError:
+                                        h_home_goals = 0
+                                        h_away_goals = 0
                             
                             if h_home_goals > h_away_goals:
                                 h2h_results['H'] += 1
-                                # Update h2h points
                                 if away_team not in team_stats[home_team]['h2h_points']:
                                     team_stats[home_team]['h2h_points'][away_team] = 0
                                 if home_team not in team_stats[away_team]['h2h_points']:
@@ -253,7 +277,6 @@ def format_match_data(df):
                                 team_stats[home_team]['h2h_points'][away_team] += 3
                             elif h_home_goals < h_away_goals:
                                 h2h_results['A'] += 1
-                                # Update h2h points
                                 if away_team not in team_stats[home_team]['h2h_points']:
                                     team_stats[home_team]['h2h_points'][away_team] = 0
                                 if home_team not in team_stats[away_team]['h2h_points']:
@@ -261,7 +284,6 @@ def format_match_data(df):
                                 team_stats[away_team]['h2h_points'][home_team] += 3
                             else:
                                 h2h_results['D'] += 1
-                                # Update h2h points for draw
                                 if away_team not in team_stats[home_team]['h2h_points']:
                                     team_stats[home_team]['h2h_points'][away_team] = 0
                                 if home_team not in team_stats[away_team]['h2h_points']:
@@ -277,15 +299,20 @@ def format_match_data(df):
                             team_stats[away_team]['h2h_away_goals'][home_team] += h_away_goals
                         except Exception as e:
                             print(f"Error processing h2h score: {e}")
+                            print(f"hScre value that caused error: {game['hScre']}")
                             continue
                         
-                        # Get odds and convert to float
-                        hm_odd = float(game['HmOd']) if pd.notnull(game['HmOd']) else 0.0
-                        dr_odd = float(game['DrOd']) if pd.notnull(game['DrOd']) else 0.0
-                        aw_odd = float(game['AwOd']) if pd.notnull(game['AwOd']) else 0.0
+                        # Get odds and convert to float, handle missing values
+                        hm_odd = float(game['HmOd']) if pd.notna(game['HmOd']) and str(game['HmOd']).strip() != '-' else 0.0
+                        dr_odd = float(game['DrOd']) if pd.notna(game['DrOd']) and str(game['DrOd']).strip() != '-' else 0.0
+                        aw_odd = float(game['AwOd']) if pd.notna(game['AwOd']) and str(game['AwOd']).strip() != '-' else 0.0
                         
-                        # Get hRnd value and convert to int
-                        h_rnd = int(game['hRnd']) if pd.notnull(game['hRnd']) else 0
+                        # Get hRnd value and convert to int, handle missing values
+                        try:
+                            h_rnd_str = str(game['hRnd']).strip() if pd.notna(game['hRnd']) else ''
+                            h_rnd = int(float(h_rnd_str)) if h_rnd_str and h_rnd_str != '-' else 0
+                        except:
+                            h_rnd = 0
                         
                         # Calculate positions before this match
                         teams = list(team_stats.keys())
@@ -309,7 +336,7 @@ def format_match_data(df):
                             'date': date,
                             'home_team': home_team,
                             'away_team': away_team,
-                            'result': str(game['FTR']),
+                            'result': ftr,
                             'odds': {
                                 'home': hm_odd,
                                 'draw': dr_odd,
@@ -332,13 +359,13 @@ def format_match_data(df):
                         matches.append(match)
                         
                         # Update stats after the match
-                        if str(game['FTR']) == '1':  # Home win
+                        if ftr == 'H':  # Home win
                             team_stats[home_team]['points'] += 3
                             team_stats[home_team]['prev_result'] = 'W'
                             team_stats[home_team]['prev_loc'] = 'H'
                             team_stats[away_team]['prev_result'] = 'L'
                             team_stats[away_team]['prev_loc'] = 'A'
-                        elif str(game['FTR']) == '2':  # Away win
+                        elif ftr == 'A':  # Away win
                             team_stats[away_team]['points'] += 3
                             team_stats[away_team]['prev_result'] = 'W'
                             team_stats[away_team]['prev_loc'] = 'A'
@@ -360,13 +387,26 @@ def format_match_data(df):
                         
                     except Exception as e:
                         print(f"Error processing match: {str(e)}")
+                        print(f"Match data that caused error: {game}")
                         continue
                 
                 # Get timing data
-                timing = [int(x) for x in matchday_data.groupby('Date').size().tolist()]
+                timing = []
+                for x in matchday_data.groupby('Date').size().tolist():
+                    try:
+                        timing.append(int(x))
+                    except:
+                        timing.append(0)
                 
                 # Get rounds data
-                rounds = sorted([int(x) for x in matchday_data['hRnd'].unique().tolist()])
+                rounds = []
+                for x in matchday_data['hRnd'].unique().tolist():
+                    try:
+                        if pd.notna(x) and str(x).strip() != '-':
+                            rounds.append(int(float(x)))
+                    except:
+                        continue
+                rounds = sorted(rounds)
                 rounds_str = f"Rounds[{','.join(map(str, rounds))}]"
                 
                 # Create matchday object
@@ -380,6 +420,9 @@ def format_match_data(df):
                     'question': [int(h2h_results['H']), int(h2h_results['A']), int(h2h_results['D'])],
                     'out': [int(current_results['H']), int(current_results['A']), int(current_results['D'])]
                 }
+                print(f"Processed matchday {matchday_key}")
+                print(f"Question: {h2h_results}")
+                print(f"Answer: {current_results}")
         
         # Sort matchdays by season and matchday number
         sorted_matchdays = {}
@@ -387,10 +430,14 @@ def format_match_data(df):
             sorted_matchdays[key] = result['matchdays'][key]
         
         result['matchdays'] = sorted_matchdays
+        print("Successfully completed format_match_data")
         return result
         
     except Exception as e:
         print(f"Error in format_match_data: {str(e)}")
+        print(f"Error type: {type(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
         return None
 
 @app.route('/test')
@@ -414,7 +461,9 @@ def get_data(league):
         
         league_files = {
             "English Premier League": "EnglishPremierLeague.csv",
+            "German Bundesliga": "GermanBundesliga.csv",
             "Italian Serie A": "ItalySerieA.csv",
+            "Turkish Super League": "TurkishSuperLeague.csv",
             "Portugal Primeira League": "GoodPortugal.csv"
         }
         
@@ -436,6 +485,14 @@ def get_data(league):
                 print(f"Successfully loaded {league} data")
                 print("Sample data:")
                 print(full_df.head())
+                
+                # Check required columns
+                required_columns = ['Date', 'MD', 'Home', 'Away', 'FTR', 'hScre', 'hRnd', 'Season']
+                missing_columns = [col for col in required_columns if col not in full_df.columns]
+                if missing_columns:
+                    print(f"Missing required columns: {missing_columns}")
+                    return jsonify({"error": f"Missing required columns: {missing_columns}"}), 400
+                
             except Exception as e:
                 print(f"Error reading CSV: {str(e)}")
                 return jsonify({"error": f"Error reading data: {str(e)}"}), 500
@@ -454,6 +511,12 @@ def get_data(league):
                 # If no season is selected, format all data
                 print("No season selected, processing all data")
                 formatted_data = format_match_data(full_df)
+            
+            # Check if formatted_data is None or invalid
+            if not formatted_data or 'matchdays' not in formatted_data:
+                print("Error: formatted_data is None or invalid")
+                print(f"formatted_data: {formatted_data}")
+                return jsonify({"error": "Error processing match data"}), 500
             
             # Debug print the formatted data
             print("Formatted data sample:")
