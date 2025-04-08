@@ -392,11 +392,12 @@ def format_match_data(df):
                 
                 # Get timing data
                 timing = []
-                for x in matchday_data.groupby('Date').size().tolist():
-                    try:
-                        timing.append(int(x))
-                    except:
-                        timing.append(0)
+                # Group by date only (ignoring time)
+                date_groups = matchday_data['Date'].dt.date.unique()
+                for date in date_groups:
+                    # Count matches for this date
+                    matches_on_date = len(matchday_data[matchday_data['Date'].dt.date == date])
+                    timing.append(matches_on_date)
                 
                 # Get rounds data
                 rounds = []
