@@ -465,7 +465,8 @@ def get_data(league):
             "German Bundesliga": "GermanBundesliga.csv",
             "Italian Serie A": "ItalySerieA.csv",
             "Turkish Super League": "TurkishSuperLeague.csv",
-            "Portugal Primeira League": "GoodPortugal.csv"
+            "Portugal Primeira League": "GoodPortugal.csv",
+            "Spanish La Liga": "SpanishLaLiga.csv"
         }
         
         if league in league_files:

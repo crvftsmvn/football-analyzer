@@ -1,14 +1,24 @@
 Date,MD,Home,Away,FTR,HomeG,AwayG,HmOd,DrOd,AwOd,Season,hHome,hAway,hScre,hRnd
-2025-04-14 14:45:00,32,Napoli,Empoli,0,-1,-1,1.29,5.5,9,2024-2025,Empoli,Napoli,0-1,8
-2025-04-13 14:45:00,32,Lazio,AS Roma,0,-1,-1,2.38,3.25,2.88,2024-2025,AS Roma,Lazio,2-0,19
-2025-04-13 12:00:00,32,Como,Torino,0,-1,-1,2.25,3.3,3.1,2024-2025,Torino,Como,1-0,9
-2025-04-13 09:00:00,32,Fiorentina,Parma,0,-1,-1,1.57,4,5.25,2024-2025,Parma,Fiorentina,1-1,1
-2025-04-13 09:00:00,32,Hellas Verona,Genoa,0,-1,-1,2.63,3.25,2.6,2024-2025,Genoa,Verona,0-2,3
-2025-04-13 06:30:00,32,Atalanta,Bologna,0,-1,-1,1.7,3.8,4.5,2024-2025,Bologna,Atalanta,1-1,6
-2025-04-12 14:45:00,32,Juventus,Lecce,0,-1,-1,1.3,5.25,8.5,2024-2025,Lecce,Juventus,1-1,14
-2025-04-12 12:00:00,32,Inter,Cagliari,0,-1,-1,1.22,6,11,2024-2025,Cagliari,Inter Milan,0-3,18
-2025-04-12 09:00:00,32,Venezia,Monza,0,-1,-1,2.15,3.2,3.4,2024-2025,Monza,Venezia,2-2,9
-2025-04-11 14:45:00,32,Udinese,AC Milan,0,-1,-1,3.5,3.5,2,2024-2025,AC Milan,Udinese,1-0,8
+2025-04-21 14:45:00,33,Parma,Juventus,0,-1,-1,6,3.4,1.67,2024-2025,Juventus,Parma,2-2,10
+2025-04-21 12:00:00,33,Genoa,Lazio,0,-1,-1,3.2,3.2,2.35,2024-2025,Lazio,Genoa,3-0,9
+2025-04-21 09:00:00,33,Cagliari,Fiorentina,0,-1,-1,3.75,3.1,2.1,2024-2025,Fiorentina,Cagliari,1-0,15
+2025-04-21 06:30:00,33,Torino,Udinese,0,-1,-1,2.05,3.1,4,2024-2025,Udinese,Torino,2-2,18
+2025-04-20 14:45:00,33,AC Milan,Atalanta,0,-1,-1,2.6,3.4,2.6,2024-2025,Atalanta,AC Milan,2-1,15
+2025-04-20 12:00:00,33,Bologna,Inter,0,-1,-1,4.2,3.1,2,2024-2025,Inter Milan,Bologna,2-2,19
+2025-04-20 09:00:00,33,Empoli,Venezia,0,-1,-1,2.1,3.1,3.75,2024-2025,Venezia,Empoli,1-1,19
+2025-04-19 14:45:00,33,AS Roma,Hellas Verona,0,-1,-1,1.44,4,8,2024-2025,Verona,AS Roma,3-2,11
+2025-04-19 12:00:00,33,Monza,Napoli,0,-1,-1,8,4.8,1.36,2024-2025,Napoli,Monza,2-0,6
+2025-04-19 09:00:00,33,Lecce,Como,0,-1,-1,2.7,3.1,2.7,2024-2025,Como,Lecce,2-0,18
+2025-04-14 14:45:00,32,Napoli,Empoli,1,3,0,1.29,5.5,9,2024-2025,Empoli,Napoli,0-1,8
+2025-04-13 14:45:00,32,Lazio,AS Roma,0,1,1,2.38,3.25,2.88,2024-2025,AS Roma,Lazio,2-0,19
+2025-04-13 12:00:00,32,Como,Torino,1,1,0,2.25,3.3,3.1,2024-2025,Torino,Como,1-0,9
+2025-04-13 09:00:00,32,Fiorentina,Parma,0,0,0,1.57,4,5.25,2024-2025,Parma,Fiorentina,1-1,1
+2025-04-13 09:00:00,32,Hellas Verona,Genoa,0,0,0,2.63,3.25,2.6,2024-2025,Genoa,Verona,0-2,3
+2025-04-13 06:30:00,32,Atalanta,Bologna,1,2,0,1.7,3.8,4.5,2024-2025,Bologna,Atalanta,1-1,6
+2025-04-12 14:45:00,32,Juventus,Lecce,1,2,1,1.3,5.25,8.5,2024-2025,Lecce,Juventus,1-1,14
+2025-04-12 12:00:00,32,Inter,Cagliari,1,3,1,1.22,6,11,2024-2025,Cagliari,Inter Milan,0-3,18
+2025-04-12 09:00:00,32,Venezia,Monza,1,1,0,2.15,3.2,3.4,2024-2025,Monza,Venezia,2-2,9
+2025-04-11 14:45:00,32,Udinese,AC Milan,2,0,4,3.5,3.5,2,2024-2025,AC Milan,Udinese,1-0,8
 2025-04-07 14:45:00,31,Bologna,Napoli,0,1,1,3.25,3.3,2.25,2024-2025,Napoli,Bologna,3-0,2
 2025-04-06 14:45:00,31,AS Roma,Juventus,0,1,1,2.63,3.5,2.6,2024-2025,Juventus,AS Roma,0-0,3
 2025-04-06 12:00:00,31,Atalanta,Lazio,2,0,1,2.1,3.5,3.4,2024-2025,Lazio,Atalanta,1-1,18
