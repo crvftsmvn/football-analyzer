@@ -1,14 +1,24 @@
 Date,MD,Home,Away,FTR,HomeG,AwayG,HmOd,DrOd,AwOd,hHome,hAway,hScre,hRnd,Season
-2025-04-21 15:00:00,33,Tottenham Hotspur,Nottingham Forest,0,-1,-1,2.05,3.6,3.1,Nottingham Forest,Tottenham Hotspur,1-0,18,2024-2025
-2025-04-20 11:30:00,33,Leicester City,Liverpool,0,-1,-1,9,6,1.25,Liverpool,Leicester City,3-1,18,2024-2025
-2025-04-20 09:00:00,33,Fulham,Chelsea,0,-1,-1,3.5,3.8,1.85,Chelsea,Fulham,1-2,18,2024-2025
-2025-04-20 09:00:00,33,Ipswich Town,Arsenal,0,-1,-1,7.5,5,1.33,Arsenal,Ipswich Town,1-0,18,2024-2025
-2025-04-20 09:00:00,33,Manchester United,Wolves,0,-1,-1,1.7,3.8,4.5,Wolves,Manchester United,2-0,18,2024-2025
-2025-04-19 12:30:00,33,Aston Villa,Newcastle United,0,-1,-1,2.35,3.6,2.75,Newcastle United,Aston Villa,3-0,18,2024-2025
-2025-04-19 10:00:00,33,Brentford,Brighton,0,-1,-1,2.6,3.6,2.5,Brighton Hove Albion,Brentford,0-0,18,2024-2025
-2025-04-19 10:00:00,33,Crystal Palace,Bournemouth,0,-1,-1,2.25,3.6,2.9,AFC Bournemouth,Crystal Palace,0-0,18,2024-2025
-2025-04-19 10:00:00,33,Everton,Manchester City,0,-1,-1,4.2,4,1.73,Manchester City,Everton,1-1,18,2024-2025
-2025-04-19 10:00:00,33,West Ham United,Southampton,0,-1,-1,1.48,4.2,6.5,Southampton,West Ham United,0-1,18,2024-2025
+2025-05-01 14:30:00,34,Nottingham Forest,Brentford,0,-1,-1,2.25,3.5,3,Brentford,Nottingham Forest,0-2,17,2024-2025
+2025-04-27 11:30:00,34,Liverpool,Tottenham Hotspur,0,-1,-1,1.36,5,8,Tottenham Hotspur,Liverpool,3-6,17,2024-2025
+2025-04-27 09:00:00,34,Bournemouth,Manchester United,0,-1,-1,1.91,3.6,3.75,Manchester United,AFC Bournemouth,0-3,17,2024-2025
+2025-04-26 10:00:00,34,Brighton,West Ham United,0,-1,-1,1.67,4,4.75,West Ham United,Brighton Hove Albion,1-1,17,2024-2025
+2025-04-26 10:00:00,34,Newcastle United,Ipswich Town,0,-1,-1,1.33,5.25,8,Ipswich Town,Newcastle United,0-4,17,2024-2025
+2025-04-26 10:00:00,34,Southampton,Fulham,0,-1,-1,6,4.1,1.53,Fulham,Southampton,0-0,17,2024-2025
+2025-04-26 10:00:00,34,Wolves,Leicester City,0,-1,-1,1.65,3.9,5,Leicester City,Wolves,0-3,17,2024-2025
+2025-04-26 07:30:00,34,Chelsea,Everton,0,-1,-1,1.55,4,5.75,Everton,Chelsea,0-0,17,2024-2025
+2025-04-23 15:00:00,34,Arsenal,Crystal Palace,0,-1,-1,1.6,4.2,5,Crystal Palace,Arsenal,1-5,17,2024-2025
+2025-04-22 15:00:00,34,Manchester City,Aston Villa,0,-1,-1,1.73,4,4.2,Aston Villa,Manchester City,2-1,17,2024-2025
+2025-04-21 15:00:00,33,Tottenham Hotspur,Nottingham Forest,2,1,2,2.05,3.6,3.1,Nottingham Forest,Tottenham Hotspur,1-0,18,2024-2025
+2025-04-20 11:30:00,33,Leicester City,Liverpool,2,0,1,9,6,1.25,Liverpool,Leicester City,3-1,18,2024-2025
+2025-04-20 09:00:00,33,Fulham,Chelsea,2,1,2,3.5,3.8,1.85,Chelsea,Fulham,1-2,18,2024-2025
+2025-04-20 09:00:00,33,Ipswich Town,Arsenal,2,0,4,7.5,5,1.33,Arsenal,Ipswich Town,1-0,18,2024-2025
+2025-04-20 09:00:00,33,Manchester United,Wolves,2,0,1,1.7,3.8,4.5,Wolves,Manchester United,2-0,18,2024-2025
+2025-04-19 12:30:00,33,Aston Villa,Newcastle United,1,4,1,2.35,3.6,2.75,Newcastle United,Aston Villa,3-0,18,2024-2025
+2025-04-19 10:00:00,33,Brentford,Brighton,1,4,2,2.6,3.6,2.5,Brighton Hove Albion,Brentford,0-0,18,2024-2025
+2025-04-19 10:00:00,33,Crystal Palace,Bournemouth,0,0,0,2.25,3.6,2.9,AFC Bournemouth,Crystal Palace,0-0,18,2024-2025
+2025-04-19 10:00:00,33,Everton,Manchester City,2,0,2,4.2,4,1.73,Manchester City,Everton,1-1,18,2024-2025
+2025-04-19 10:00:00,33,West Ham United,Southampton,0,1,1,1.48,4.2,6.5,Southampton,West Ham United,0-1,18,2024-2025
 2025-04-14 15:00:00,32,Bournemouth,Fulham,1,1,0,2,3.6,3.5,Fulham,AFC Bournemouth,2-2,19,2024-2025
 2025-04-13 11:30:00,32,Newcastle United,Manchester United,1,4,1,1.75,4.1,4,Manchester United,Newcastle United,0-2,19,2024-2025
 2025-04-13 09:00:00,32,Chelsea,Ipswich Town,0,2,2,1.36,6,6.5,Ipswich Town,Chelsea,2-0,19,2024-2025
@@ -39,7 +49,7 @@ Date,MD,Home,Away,FTR,HomeG,AwayG,HmOd,DrOd,AwOd,hHome,hAway,hScre,hRnd,Season
 2025-04-01 15:00:00,30,Nottingham Forest,Manchester United,1,1,0,2.15,3.8,2.9,Manchester United,Nottingham Forest,2-3,15,2024-2025
 2025-04-01 14:45:00,30,Arsenal,Fulham,1,2,1,1.4,4.75,7,Fulham,Arsenal,1-1,15,2024-2025
 2025-04-01 14:45:00,30,Wolves,West Ham United,1,1,0,2.3,3.5,2.88,West Ham United,Wolves,2-1,15,2024-2025
-2025-04-16 14:30:00,29,Newcastle United,Crystal Palace,0,-1,-1,,,,Crystal Palace,Newcastle United,1-1,13,2024-2025
+2025-04-16 14:30:00,29,Newcastle United,Crystal Palace,1,5,0,1.7,3.85,4.9,Crystal Palace,Newcastle United,1-1,13,2024-2025
 2025-03-16 15:00:00,29,Leicester City,Manchester United,2,0,3,5,3.9,1.67,Man Utd,Leicester,3-0,11,2024-2025
 2025-03-16 09:30:00,29,Arsenal,Chelsea,1,1,0,1.75,3.8,4.5,Chelsea,Arsenal,1-1,11,2024-2025
 2025-03-16 09:30:00,29,Fulham,Tottenham Hotspur,1,2,0,2.45,3.5,2.8,Tottenham,Fulham,1-1,13,2024-2025
