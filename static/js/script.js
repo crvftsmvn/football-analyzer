@@ -18,7 +18,7 @@ document.getElementById('simplifiedView').addEventListener('change', function() 
 
 function updateComparison() {
     const selected = getSelectedMatchdays();
-    if (selected.length >= 2 && selected.length <= 5) {
+    if (selected.length >= 2 && selected.length <= 8) {
         displayComparison(selected);
     }
 }
@@ -40,21 +40,21 @@ function populateMatchdayCheckboxes(data) {
         const numB = parseInt(b);
         return numA - numB;
     }).forEach(matchday => {
-        // Format matchday as "Matchday X"
-        const formattedMatchday = `Matchday ${matchday}`;
+        // Format matchday as "Matchday X" for display
+        const formattedMatchday = `Matchday ${parseInt(matchday, 10)}`;
         
         const label = document.createElement('label');
         label.className = 'matchday-checkbox';
         
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-        checkbox.value = formattedMatchday;
+        checkbox.value = matchday; // Use matchday number as value (with leading zeros)
         checkbox.addEventListener('change', function() {
             const selected = getSelectedMatchdays();
             console.log('Selected matchdays:', selected);
-            document.getElementById('compareBtn').disabled = selected.length < 2 || selected.length > 5;
+            document.getElementById('compareBtn').disabled = selected.length < 2 || selected.length > 8;
             
-            if (selected.length >= 2 && selected.length <= 5) {
+            if (selected.length >= 2 && selected.length <= 8) {
                 console.log('Triggering comparison with:', selected);
                 displayComparison(selected);
             } else if (selected.length === 0 || selected.length === 1) {
@@ -123,7 +123,7 @@ function populateSeasonDropdown(seasons) {
 
     seasons.forEach(season => {
         const option = document.createElement('option');
-        option.value = season;
+        option.value = season; // Ensure full season string is used
         option.textContent = season;
         seasonDropdown.appendChild(option);
     });
@@ -133,6 +133,7 @@ function populateSeasonDropdown(seasons) {
         const selectedSeason = this.value;
         if (selectedSeason) {
             displaySeasonData(selectedSeason);
+            initializeMatchdayAnalysis(); // Only run after a season is selected
         }
     });
 }
@@ -194,75 +195,90 @@ function displaySeasonData(season) {
             
             try {
                 displayData(result.data);
-                populateMatchdayCheckboxes(Object.keys(result.data));
-                initializeMatchdayAnalysis();
+                // Debug: log season and all matchday keys
+                console.log('Season value:', season);
+                if (result.data.matchdays) {
+                    console.log('All matchday keys:', Object.keys(result.data.matchdays));
+                }
+                // Extract matchday numbers for the selected season
+                let matchdayKeys = [];
+                if (result.data.matchdays) {
+                    matchdayKeys = Object.keys(result.data.matchdays)
+                        .filter(key => key.startsWith(season + '-'))
+                        .map(key => key.split('-').pop()) // keep leading zeros
+                        .filter((v, i, arr) => arr.indexOf(v) === i);
+                }
+                console.log('Extracted matchdayKeys:', matchdayKeys);
+                populateMatchdayCheckboxes(matchdayKeys);
                 if (typeof updateCurrentMatchday === 'function') {
                     updateCurrentMatchday();
                 }
-            } catch (error) {
-                console.error('Error processing data:', error);
-                document.getElementById('dataDisplay').innerHTML = `<p class="error">Error processing data: ${error.message}</p>`;
+            } catch (e) {
+                console.error('Error displaying data:', e);
+                document.getElementById('dataDisplay').innerHTML = '<p class="error">Error displaying data</p>';
             }
         })
         .catch(error => {
-            clearTimeout(timeoutId);
-            console.error('Error loading data:', error);
-            document.getElementById('dataDisplay').innerHTML = `<p class="error">Error loading data: ${error.message}</p>`;
-            if (document.getElementById('matchdayDisplay')) {
-                document.getElementById('matchdayDisplay').textContent = 'Error loading matchday data';
-            }
+            console.error('Fetch error:', error);
+            document.getElementById('dataDisplay').innerHTML = '<p class="error">Error loading data</p>';
         });
 }
 
 function formatMatch(match, isComparison) {
-    console.log("Original match string for " + (isComparison ? "comparison" : "regular") + ":", match);
-    
-    // Extract date information using the new format
-    const datePattern = /<<DATE_INFO:([^>]*)>>/;
-    const dateMatch = match.match(datePattern);
-    let dateTimeHtml = '';
-    
-    // Process date if found
-    if (dateMatch && dateMatch[1]) {
-        const dateInfo = dateMatch[1].replace('DATE_INFO:', '');
-        // Split into date and time parts
-        const parts = dateInfo.trim().split(' ');
-        const datePart = parts[0];
-        const timePart = parts.length > 1 ? parts[1] : "15:00";  // Default time if not provided
-        
-        // Create date-time HTML
-        dateTimeHtml = `<strong class="match-date-time" style="color: #2c3e50; background-color: #f8f9fa; padding: 2px 5px; border-radius: 3px; margin-right: 5px; display: ${(isComparison && simplifiedView) ? 'none' : 'inline-block'}">${datePart} ${timePart}</strong>`;
-    }
-    
-    // Remove the date pattern from the string
-    let formattedMatch = match.replace(datePattern, '');
-    
-    // Remove any remaining weight-related brackets
-    formattedMatch = formattedMatch.replace(/\[\d+\s+[\d,\s]+\]/g, '');
-    
-    // Add the date back with proper formatting
-    formattedMatch = `${dateTimeHtml} ${formattedMatch.trim()}`;
-    
-    console.log("Formatted match string:", formattedMatch);
-    
-    if (isComparison && simplifiedView) {
-        // For simplified view, only show the result letter (H, A, or D)
-        // First split by the arrow to get the result part
-        const parts = formattedMatch.split('=>');
-        if (parts.length > 1) {
-            // Extract just the result letter (H, A, or D) and remove any odds
-            const resultPart = parts[1].trim();
-            const resultMatch = resultPart.match(/^([HAD])/);
-            if (resultMatch) {
-                // Return with the date-time (hidden via CSS) and just the result letter
-                return `${dateTimeHtml}${resultMatch[1]}`;
-            }
-            // If no match, return the result part without any brackets
-            return resultPart.replace(/\[.*?\]/g, '').trim();
+    // If match is a string (legacy), parse as before
+    if (typeof match === 'string') {
+        console.log("Original match string for " + (isComparison ? "comparison" : "regular") + ":", match);
+        // Extract date information using the new format
+        const datePattern = /<<DATE_INFO:([^>]*)>>/;
+        const dateMatch = match.match(datePattern);
+        let dateTimeHtml = '';
+        // Process date if found
+        if (dateMatch && dateMatch[1]) {
+            const dateInfo = dateMatch[1].replace('DATE_INFO:', '');
+            // Split into date and time parts
+            const parts = dateInfo.trim().split(' ');
+            const datePart = parts[0];
+            const timePart = parts.length > 1 ? parts[1] : "15:00";  // Default time if not provided
+            // Create date-time HTML
+            dateTimeHtml = `<strong class="match-date-time" style="color: #2c3e50; background-color: #f8f9fa; padding: 2px 5px; border-radius: 3px; margin-right: 5px; display: ${(isComparison && simplifiedView) ? 'none' : 'inline-block'}">${datePart} ${timePart}</strong>`;
         }
+        // Remove the date pattern from the string
+        let formattedMatch = match.replace(datePattern, '');
+        // Remove any remaining weight-related brackets
+        formattedMatch = formattedMatch.replace(/\[\d+\s+[\d,\s]+\]/g, '');
+        // Add the date back with proper formatting
+        formattedMatch = `${dateTimeHtml} ${formattedMatch.trim()}`;
+        console.log("Formatted match string:", formattedMatch);
+        if (isComparison && simplifiedView) {
+            // For simplified view, only show the result letter (H, A, or D)
+            // First split by the arrow to get the result part
+            const parts = formattedMatch.split('=>');
+            if (parts.length > 1) {
+                // Extract just the result letter (H, A, or D) and remove any odds
+                const resultPart = parts[1].trim();
+                const resultMatch = resultPart.match(/^([HAD])/);
+                if (resultMatch) {
+                    // Return with the date-time (hidden via CSS) and just the result letter
+                    return `${dateTimeHtml}${resultMatch[1]}`;
+                }
+                // If no match, return the result part without any brackets
+                return resultPart.replace(/\[.*?\]/g, '').trim();
+            }
+        }
+        return formattedMatch;
     }
-    
-    return formattedMatch;
+    // If match is an object (new backend), format using its properties
+    let dateTimeHtml = '';
+    if (match.date) {
+        dateTimeHtml = `<strong class="match-date-time" style="color: #2c3e50; background-color: #f8f9fa; padding: 2px 5px; border-radius: 3px; margin-right: 5px; display: ${(isComparison && simplifiedView) ? 'none' : 'inline-block'}">${match.date}</strong>`;
+    }
+    let resultLetter = match.result || '';
+    let oddsStr = match.odds ? `[${(match.odds.home ?? '').toFixed ? match.odds.home.toFixed(2) : match.odds.home}, ${(match.odds.draw ?? '').toFixed ? match.odds.draw.toFixed(2) : match.odds.draw}, ${(match.odds.away ?? '').toFixed ? match.odds.away.toFixed(2) : match.odds.away}]` : '';
+    if (isComparison && simplifiedView) {
+        return `${dateTimeHtml}${resultLetter}`;
+    }
+    // Compose a readable string for the match
+    return `${dateTimeHtml} ${match.home_team} vs ${match.away_team} (${resultLetter}) ${oddsStr}`;
 }
 
 function createMatchdayHTML(matchday, data, isComparison = false) {
@@ -388,6 +404,12 @@ function displayData(data) {
 }
 
 function displayComparison(selectedMatchdays) {
+    const season = document.getElementById('season').value;
+    console.log('Season in displayComparison:', season);
+    if (!season) {
+        alert('Please select a season first!');
+        return;
+    }
     console.log('Displaying comparison for:', selectedMatchdays);
     console.log('Global data:', globalData);
     
@@ -398,18 +420,23 @@ function displayComparison(selectedMatchdays) {
     const flexContainer = document.createElement('div');
     flexContainer.className = 'comparison-container';
     
-    selectedMatchdays.forEach(matchday => {
-        // Extract the matchday number from the format "Matchday X"
-        const matchdayNum = matchday.split(' ')[1];
-        console.log('Processing matchday:', matchdayNum);
+    // Debug: show available keys
+    if (globalData && globalData.matchdays) {
+        console.log('Available matchday keys:', Object.keys(globalData.matchdays));
+    }
+    
+    selectedMatchdays.forEach(matchdayNum => {
+        // Always pad to two digits for backend key
+        const matchdayKey = `${season}-${matchdayNum.padStart(2, '0')}`;
+        console.log('Trying to access:', matchdayKey);
         
-        if (globalData && globalData[matchdayNum]) {
-            console.log('Found data for matchday:', matchdayNum);
-            const matchdayData = globalData[matchdayNum];
-            const matchdayHtml = createMatchdayHTML(matchday, matchdayData, true);
+        if (globalData && globalData.matchdays && globalData.matchdays[matchdayKey]) {
+            console.log('Found data for matchday:', matchdayKey);
+            const matchdayData = globalData.matchdays[matchdayKey];
+            const matchdayHtml = createMatchdayHTML(`Matchday ${parseInt(matchdayNum, 10)}`, matchdayData, true);
             flexContainer.innerHTML += matchdayHtml;
         } else {
-            console.error('No data found for matchday:', matchdayNum);
+            console.error('No data found for matchday:', matchdayKey);
         }
     });
     
@@ -429,80 +456,109 @@ function initializeMatchdayAnalysis() {
     // Clear previous options
     analysisSelect.innerHTML = '<option value="">Select Matchday</option>';
     
-    if (globalData) {
+    if (globalData && globalData.matchdays) {
         // Add matchday options
-        Object.keys(globalData)
-            .sort((a, b) => {
-                const numA = parseInt(a.split(' ')[1]);
-                const numB = parseInt(b.split(' ')[1]);
-                return numA - numB;
-            })
+        Object.keys(globalData.matchdays)
+            .filter(key => key.startsWith(document.getElementById('season').value + '-'))
+            .map(key => key.split('-').pop())
+            .sort((a, b) => parseInt(a) - parseInt(b))
             .forEach(matchday => {
+                // Always use the backend key as value (already two digits)
+                const padded = matchday.padStart(2, '0');
                 const option = document.createElement('option');
-                option.value = matchday;
-                option.textContent = matchday;
+                option.value = padded;
+                option.textContent = `Matchday ${parseInt(padded, 10)}`;
                 analysisSelect.appendChild(option);
             });
+    } else {
+        console.log('No matchdays found in globalData for analysis.');
     }
     
     // Add event listeners
-    analysisSelect.addEventListener('change', function() {
+    analysisSelect.onchange = function() {
         if (this.value) {
             currentDateIndex = 0;
-            currentMatchdayData = globalData[this.value];
-            groupMatchesByDate();
-            // Clear previous display
-            document.getElementById('analysisDisplay').innerHTML = '';
-            // Show first date's games
-            displayCurrentDateGames();
-            nextDateBtn.disabled = dateGroups.length <= 1;
+            const season = document.getElementById('season').value;
+            const matchdayKey = `${season}-${this.value}`;
+            if (globalData && globalData.matchdays && globalData.matchdays[matchdayKey]) {
+                currentMatchdayData = globalData.matchdays[matchdayKey];
+                console.log('Selected matchday data for analysis:', currentMatchdayData);
+                groupMatchesByDate();
+                // Clear previous display
+                document.getElementById('analysisDisplay').innerHTML = '';
+                // Show first date's games
+                displayCurrentDateGames();
+                nextDateBtn.disabled = dateGroups.length <= 1;
+            } else {
+                console.log('No data found for matchday key:', matchdayKey);
+                currentMatchdayData = null;
+                dateGroups = [];
+                document.getElementById('analysisDisplay').innerHTML = '<p class="error">No data for selected matchday</p>';
+                nextDateBtn.disabled = true;
+            }
         } else {
             currentMatchdayData = null;
             dateGroups = [];
             document.getElementById('analysisDisplay').innerHTML = '';
             nextDateBtn.disabled = true;
         }
-    });
+    };
     
-    nextDateBtn.addEventListener('click', function() {
+    nextDateBtn.onclick = function() {
         if (currentDateIndex < dateGroups.length - 1) {
             currentDateIndex++;
             displayCurrentDateGames();
             this.disabled = currentDateIndex >= dateGroups.length - 1;
         }
-    });
+    };
 }
 
 function groupMatchesByDate() {
     dateGroups = [];
-    if (!currentMatchdayData) return;
-    
+    if (!currentMatchdayData) {
+        console.log('No currentMatchdayData in groupMatchesByDate');
+        return;
+    }
     const matches = currentMatchdayData.matches;
-    const timing = currentMatchdayData.summary.timing;
-    
-    let currentIndex = 0;
-    timing.forEach(gamesCount => {
-        dateGroups.push(matches.slice(currentIndex, currentIndex + gamesCount));
-        currentIndex += gamesCount;
-    });
+    console.log('groupMatchesByDate: matches:', matches);
+    // Try to use timing if available, otherwise group by date
+    const timing = currentMatchdayData.summary && currentMatchdayData.summary.timing;
+    if (matches && timing && timing.length > 0) {
+        let currentIndex = 0;
+        timing.forEach(gamesCount => {
+            dateGroups.push(matches.slice(currentIndex, currentIndex + gamesCount));
+            currentIndex += gamesCount;
+        });
+        console.log('Grouped dateGroups (timing):', dateGroups);
+    } else if (matches && matches.length > 0) {
+        // Group by unique date string
+        const dateMap = {};
+        matches.forEach(match => {
+            const dateStr = match.date.split(' ')[0]; // Use only the date part
+            if (!dateMap[dateStr]) dateMap[dateStr] = [];
+            dateMap[dateStr].push(match);
+        });
+        dateGroups = Object.values(dateMap);
+        console.log('Grouped dateGroups (by date):', dateGroups);
+    } else {
+        console.log('No matches to group');
+    }
 }
 
 function displayCurrentDateGames() {
     const displayDiv = document.getElementById('analysisDisplay');
-    if (!dateGroups[currentDateIndex]) {
+    if (!dateGroups[currentDateIndex] || dateGroups[currentDateIndex].length === 0) {
+        displayDiv.innerHTML = '<p class="error">No matches for this matchday</p>';
         return;
     }
-    
     const games = dateGroups[currentDateIndex];
     const totalDates = dateGroups.length;
-    
     // Format the games with our new approach
     const formattedGames = games.map(match => {
         const formatted = formatMatch(match, false);
         console.log("Analysis formatted match:", formatted);
         return `<li class="match-item">${formatted}</li>`;
     });
-    
     // Create new section for current date
     const dateSection = document.createElement('div');
     dateSection.className = 'date-section';
@@ -512,8 +568,8 @@ function displayCurrentDateGames() {
             ${formattedGames.join('')}
         </ul>
     `;
-    
-    // Append new section instead of replacing all content
+    // Replace all content with new section
+    displayDiv.innerHTML = '';
     displayDiv.appendChild(dateSection);
 }
 
