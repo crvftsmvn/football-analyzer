@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Arranged Matchday Results</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f8f9fa; }
+        .container { margin: 40px auto; max-width: 700px; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px #0001; padding: 32px; }
+        h1 { text-align: center; color: #1976d2; }
+        table { width: 100%; border-collapse: collapse; margin-top: 24px; }
+        th, td { padding: 12px 8px; text-align: center; border-bottom: 1px solid #e0e0e0; }
+        th { background: #e3f2fd; color: #1976d2; font-size: 1.1em; }
+        tr:last-child td { border-bottom: none; }
+        tr:nth-child(even) { background: #f1f8e9; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Arranged Matchday Results</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Matchday</th>
+                    <th>Home Wins</th>
+                    <th>Away Wins</th>
+                    <th>Draws</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for md in matchday_stats %}
+                <tr>
+                    <td>{{ md.matchday }}</td>
+                    <td>{{ md.home_wins }}</td>
+                    <td>{{ md.away_wins }}</td>
+                    <td>{{ md.draws }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html> 

@@ -291,7 +291,15 @@ function createMatchdayHTML(matchday, data, isComparison = false) {
     let html = `<div class="matchday ${isComparison ? 'comparison-matchday' : ''}">`;
     html += `<h3>${matchday}</h3>`;
     
-    // Add matches
+    // If in comparison and simplified view, only show results
+    if (isComparison && simplifiedView) {
+        data.matches.forEach(match => {
+            html += `<div class="match">${formatMatch(match, true)}</div>`;
+        });
+        html += '</div>';
+        return html;
+    }
+    // Otherwise, show all details
     data.matches.forEach(match => {
         html += `<div class="match">${formatMatch(match, isComparison)}</div>`;
     });

@@ -5,6 +5,15 @@ import numpy as np
 
 app = Flask(__name__)
 
+# Demo data for arranged page
+app.matchday_answers = {
+    '2024-2025-01': {'answer': {'H': 5, 'A': 3, 'D': 2}},
+    '2024-2025-02': {'answer': {'H': 4, 'A': 4, 'D': 2}},
+    '2024-2025-03': {'answer': {'H': 6, 'A': 2, 'D': 2}},
+    '2024-2025-04': {'answer': {'H': 3, 'A': 5, 'D': 2}},
+    '2024-2025-05': {'answer': {'H': 4, 'A': 3, 'D': 3}},
+}
+
 def get_team_position(team, date, df):
     """Calculate team's points based on completed matches before the current matchday in the same season."""
     try:
@@ -424,6 +433,15 @@ def format_match_data(df):
                 print(f"Processed matchday {matchday_key}")
                 print(f"Question: {h2h_results}")
                 print(f"Answer: {current_results}")
+                
+                # Before your matchday processing loop (inside the function that processes seasons/matchdays):
+                if not hasattr(app, 'matchday_answers'):
+                    app.matchday_answers = {}
+                matchday_answers = {}
+                
+                # Inside your matchday loop, after you compute the answer:
+                matchday_key = f"{season}-{matchday:02d}"
+                matchday_answers[matchday_key] = {'answer': current_results}
         
         # Sort matchdays by season and matchday number
         sorted_matchdays = {}
@@ -432,6 +450,10 @@ def format_match_data(df):
         
         result['matchdays'] = sorted_matchdays
         print("Successfully completed format_match_data")
+        
+        # After processing all matchdays (outside the loop):
+        app.matchday_answers = matchday_answers
+        
         return result
         
     except Exception as e:
@@ -580,6 +602,29 @@ def get_data(league):
     except Exception as e:
         print(f"Error in get_data: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+@app.route('/arranged')
+def arranged():
+    # Read the EnglishPremierLeague.csv file
+    df = pd.read_csv('data/EnglishPremierLeague.csv')
+    # Ensure MD and FTR columns are present
+    if 'MD' not in df.columns or 'FTR' not in df.columns:
+        return 'CSV missing MD or FTR columns', 500
+    # Group by matchday and count results
+    matchday_stats = []
+    for md, group in df.groupby('MD'):
+        home_wins = (group['FTR'] == 1).sum()
+        away_wins = (group['FTR'] == 2).sum()
+        draws = (group['FTR'] == 0).sum()
+        matchday_stats.append({
+            'matchday': int(md),
+            'home_wins': int(home_wins),
+            'away_wins': int(away_wins),
+            'draws': int(draws)
+        })
+    # Sort by matchday number
+    matchday_stats = sorted(matchday_stats, key=lambda x: x['matchday'])
+    return render_template('arranged.html', matchday_stats=matchday_stats)
 
 if __name__ == '__main__':
     # Use the PORT environment variable provided by Render
