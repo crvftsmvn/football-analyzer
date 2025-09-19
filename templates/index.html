@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Your Flask App</title>
+    <style>
+        .md-grid { display: flex; flex-direction: column; gap: 20px; margin-top: 32px; }
+        .md-row { display: flex; flex-direction: row; gap: 16px; flex-wrap: wrap; justify-content: flex-start; }
+        .md-cell { border: 1px solid #aaa; border-radius: 6px; padding: 8px 12px; min-width: 80px; max-width: 120px; background: #f9f9f9; text-align: center; font-family: monospace; flex: 0 0 auto; }
+        .md-label { font-weight: bold; margin-bottom: 4px; display: block; }
+        .md-vector { white-space: pre; font-size: 1.1em; }
+        .md-cell:nth-child(8n+1) { margin-left: 0; }
+    </style>
+</head>
+<body>
+    <h1>Hello, Flask is running!</h1>
+    <p>This is the homepage of your new Flask project.</p>
+
+    <label for="league-select"><strong>Select League:</strong></label>
+    <select id="league-select">
+        <option value="">-- Choose a league --</option>
+        <option value="EnglishPremierLeague.csv">English Premier League</option>
+        <option value="GermanBundesliga.csv">German Bundesliga</option>
+        <option value="ItalianSerieA.csv">Italian Serie A</option>
+        <option value="SpanishLaLiga.csv">Spanish La Liga</option>
+    </select>
+
+    <label for="season-select" style="margin-left:20px;"><strong>Select Season:</strong></label>
+    <select id="season-select" disabled>
+        <option value="">-- Choose a season --</option>
+    </select>
+
+    <div id="league-data"></div>
+    <div id="ftr-variations"></div>
+
+    <script>
+    document.getElementById('league-select').addEventListener('change', function() {
+        const league = this.value;
+        const seasonSelect = document.getElementById('season-select');
+        seasonSelect.innerHTML = '<option value="">-- Choose a season --</option>';
+        seasonSelect.disabled = true;
+        document.getElementById('league-data').innerHTML = '';
+        if (!league) return;
+        fetch(`/get_seasons?league=${encodeURIComponent(league)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.seasons && data.seasons.length > 0) {
+                    data.seasons.forEach(season => {
+                        const opt = document.createElement('option');
+                        opt.value = season;
+                        opt.textContent = season;
+                        seasonSelect.appendChild(opt);
+                    });
+                    seasonSelect.disabled = false;
+                } else {
+                    seasonSelect.disabled = true;
+                }
+            })
+            .catch(err => {
+                seasonSelect.disabled = true;
+            });
+    });
+
+    document.getElementById('season-select').addEventListener('change', function() {
+        const league = document.getElementById('league-select').value;
+        const season = this.value;
+        const leagueDataDiv = document.getElementById('league-data');
+        const ftrVariationsDiv = document.getElementById('ftr-variations');
+        leagueDataDiv.innerHTML = '';
+        ftrVariationsDiv.innerHTML = '';
+        if (!league || !season) return;
+        fetch(`/get_matchday_vectors?league=${encodeURIComponent(league)}&season=${encodeURIComponent(season)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.grid) {
+                    leagueDataDiv.innerHTML = '<p>No data found for this selection.</p>';
+                    return;
+                }
+                // Build the grid - group matchdays into rows of 7-8 items
+                const gridDiv = document.createElement('div');
+                gridDiv.className = 'md-grid';
+                
+                // Flatten all matchdays from all rows into a single array
+                const allMatchdays = [];
+                data.grid.forEach(row => {
+                    row.forEach(cell => {
+                        allMatchdays.push(cell);
+                    });
+                });
+                
+                // Sort matchdays by matchday number to ensure serial order (1, 2, 3, etc.)
+                allMatchdays.sort((a, b) => a.matchday - b.matchday);
+                
+                // Group matchdays into rows of 7-8 items
+                const itemsPerRow = 7;
+                for (let i = 0; i < allMatchdays.length; i += itemsPerRow) {
+                    const rowDiv = document.createElement('div');
+                    rowDiv.className = 'md-row';
+                    
+                    const rowMatchdays = allMatchdays.slice(i, i + itemsPerRow);
+                    rowMatchdays.forEach(cell => {
+                        const cellDiv = document.createElement('div');
+                        cellDiv.className = 'md-cell';
+                        cellDiv.innerHTML = `<span class='md-label'>MD ${cell.matchday}</span>` +
+                            `<span class='md-vector'>H - ${cell.vector[0]}\nA - ${cell.vector[1]}\nD - ${cell.vector[2]}</span>`;
+                        // FTR combinations
+                        const h = cell.vector[0], a = cell.vector[1], d = cell.vector[2];
+                        let combs = [
+                            {sum: h+a, rem: d},
+                            {sum: h+d, rem: a},
+                            {sum: a+d, rem: h}
+                        ];
+                        combs = combs.filter(c => !(c.sum === 10 && c.rem === 0));
+                        const seen = new Set();
+                        combs = combs.filter(c => {
+                            const key = `${c.sum}-${c.rem}`;
+                            if (seen.has(key)) return false;
+                            seen.add(key);
+                            return true;
+                        });
+                        const combDiv = document.createElement('div');
+                        combDiv.style.marginTop = '6px';
+                        combDiv.style.fontSize = '0.95em';
+                        combDiv.style.color = '#1976d2';
+                        combDiv.innerHTML = combs.map(c => `${c.sum}-${c.rem}`).join('<br>');
+                        cellDiv.appendChild(combDiv);
+                        // hScre counts
+                        if (cell.hScre_vector) {
+                            cellDiv.innerHTML += `<br><span class='md-vector' style='color:#c62828;'>H - ${cell.hScre_vector[0]}\nA - ${cell.hScre_vector[1]}\nD - ${cell.hScre_vector[2]}</span>`;
+                            // hScre combinations
+                            const hh = cell.hScre_vector[0], ha = cell.hScre_vector[1], hd = cell.hScre_vector[2];
+                            let hcombs = [
+                                {sum: hh+ha, rem: hd},
+                                {sum: hh+hd, rem: ha},
+                                {sum: ha+hd, rem: hh}
+                            ];
+                            hcombs = hcombs.filter(c => !(c.sum === 10 && c.rem === 0));
+                            const hseen = new Set();
+                            hcombs = hcombs.filter(c => {
+                                const key = `${c.sum}-${c.rem}`;
+                                if (hseen.has(key)) return false;
+                                hseen.add(key);
+                                return true;
+                            });
+                            const hcombDiv = document.createElement('div');
+                            hcombDiv.style.marginTop = '6px';
+                            hcombDiv.style.fontSize = '0.95em';
+                            hcombDiv.style.color = '#c62828';
+                            hcombDiv.innerHTML = hcombs.map(c => `${c.sum}-${c.rem}`).join('<br>');
+                            cellDiv.appendChild(hcombDiv);
+                        }
+                        rowDiv.appendChild(cellDiv);
+                    });
+                    gridDiv.appendChild(rowDiv);
+                }
+                leagueDataDiv.appendChild(gridDiv);
+            })
+            .catch(err => {
+                leagueDataDiv.innerHTML = '<p>Error loading data.</p>';
+            });
+        // Fetch and display FTR variations
+        fetch(`/get_ftr_variations?league=${encodeURIComponent(league)}&season=${encodeURIComponent(season)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.variations || data.variations.length === 0) {
+                    ftrVariationsDiv.innerHTML = '<p>No FTR variations found for this season.</p>';
+                    return;
+                }
+                let html = `<h2 style='margin-top:2em;color:#1976d2;'>FTR Variation Frequencies</h2>`;
+                html += `<table style='border-collapse:collapse;margin-top:1em;'>`;
+                html += `<tr><th style='padding:4px 12px;border-bottom:1px solid #aaa;'>Variation (sorted)</th><th style='padding:4px 12px;border-bottom:1px solid #aaa;'>Count</th></tr>`;
+                data.variations.forEach(([variation, count]) => {
+                    html += `<tr><td style='padding:4px 12px;'>${variation.replace(/-/g, ' ')}</td><td style='padding:4px 12px;'>${count}</td></tr>`;
+                });
+                html += `</table>`;
+                ftrVariationsDiv.innerHTML = html;
+            })
+            .catch(err => {
+                ftrVariationsDiv.innerHTML = '<p>Error loading FTR variations.</p>';
+            });
+    });
+    </script>
+</body>
+</html>
