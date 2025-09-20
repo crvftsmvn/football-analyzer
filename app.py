@@ -66,6 +66,26 @@ def get_matchday_vectors():
                 'vector': [home, away, draw],
                 'hScre_vector': [h_home, h_away, h_draw]
             }
+        # Calculate game frequency for each matchday
+        md_game_frequency = {}
+        for md in matchdays:
+            md_matches = df[df['MD'] == md]
+            game_frequency = []
+            if 'Date_Only' in md_matches.columns:
+                # Group by Date_Only and count games per day
+                date_counts = md_matches['Date_Only'].value_counts().sort_index()
+                game_frequency = date_counts.tolist()
+            elif 'Date' in md_matches.columns:
+                # Extract date part from datetime and count games per day
+                md_matches_copy = md_matches.copy()
+                md_matches_copy['Date_Only'] = pd.to_datetime(md_matches_copy['Date']).dt.date
+                date_counts = md_matches_copy['Date_Only'].value_counts().sort_index()
+                game_frequency = date_counts.tolist()
+            else:
+                # If no date information, assume all games on same day
+                game_frequency = [len(md_matches)]
+            md_game_frequency[int(md)] = game_frequency
+
         # Arrange into 5 rows as described
         grid = [[] for _ in range(5)]
         for idx, md in enumerate(matchdays):
@@ -73,7 +93,8 @@ def get_matchday_vectors():
             grid[row].append({
                 'matchday': int(md),
                 'vector': md_vectors[int(md)]['vector'],
-                'hScre_vector': md_vectors[int(md)]['hScre_vector']
+                'hScre_vector': md_vectors[int(md)]['hScre_vector'],
+                'game_frequency': md_game_frequency[int(md)]
             })
         return jsonify({'grid': grid})
     except Exception as e:
@@ -114,6 +135,23 @@ def get_matchday_details():
         result = []
         for md in matchdays:
             md_matches = df[df['MD'] == md]
+            
+            # Calculate game frequency for this matchday
+            game_frequency = []
+            if 'Date_Only' in md_matches.columns:
+                # Group by Date_Only and count games per day
+                date_counts = md_matches['Date_Only'].value_counts().sort_index()
+                game_frequency = date_counts.tolist()
+            elif 'Date' in md_matches.columns:
+                # Extract date part from datetime and count games per day
+                md_matches_copy = md_matches.copy()
+                md_matches_copy['Date_Only'] = pd.to_datetime(md_matches_copy['Date']).dt.date
+                date_counts = md_matches_copy['Date_Only'].value_counts().sort_index()
+                game_frequency = date_counts.tolist()
+            else:
+                # If no date information, assume all games on same day
+                game_frequency = [len(md_matches)]
+            
             matches = []
             for _, match in md_matches.iterrows():
                 home = match['Home']
@@ -167,7 +205,7 @@ def get_matchday_details():
                     'away_last5': away_last5,
                     'away_last7': away_last7
                 })
-            result.append({'matchday': int(md), 'matches': matches})
+            result.append({'matchday': int(md), 'matches': matches, 'game_frequency': game_frequency})
         return jsonify({'matchdays': result})
     except Exception as e:
         return jsonify({'error': str(e)}), 500

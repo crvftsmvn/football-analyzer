@@ -150,6 +150,17 @@
                             hcombDiv.innerHTML = hcombs.map(c => `${c.sum}-${c.rem}`).join('<br>');
                             cellDiv.appendChild(hcombDiv);
                         }
+                        
+                        // Game frequency
+                        if (cell.game_frequency && cell.game_frequency.length > 0) {
+                            const freqDiv = document.createElement('div');
+                            freqDiv.style.marginTop = '6px';
+                            freqDiv.style.fontSize = '0.9em';
+                            freqDiv.style.color = '#2e7d32';
+                            freqDiv.style.fontWeight = 'bold';
+                            freqDiv.innerHTML = `Freq: ${cell.game_frequency.join(', ')}`;
+                            cellDiv.appendChild(freqDiv);
+                        }
                         rowDiv.appendChild(cellDiv);
                     });
                     gridDiv.appendChild(rowDiv);
