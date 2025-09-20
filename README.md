@@ -36,6 +36,10 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+## Live Demo
+
+🌐 **Try the application online:** [https://analyzer-5zun.onrender.com/](https://analyzer-5zun.onrender.com/)
+
 ## Usage
 
 1. Start the Flask application:
